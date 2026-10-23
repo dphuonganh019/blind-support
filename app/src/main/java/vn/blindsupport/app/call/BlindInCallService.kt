@@ -16,6 +16,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import vn.blindsupport.app.core.AppVolume
 import vn.blindsupport.app.core.AudioState
 import vn.blindsupport.app.core.Prefs
 import vn.blindsupport.app.core.RingVolumeGuard
@@ -160,11 +161,12 @@ class BlindInCallService : InCallService() {
     // ---------------- Loa ngoài ----------------
 
     private fun routeToSpeakerWithRetry() {
-        if (!Prefs.autoSpeaker) return
         scope.launch {
             for (wait in longArrayOf(0, 600, 1500, 3000)) {
                 delay(wait)
-                if (AudioState.hasHeadset(this@BlindInCallService)) return@launch
+                // Âm lượng cuộc gọi tách riêng cho loa ngoài và loa trong, nên đặt lại sau mỗi lần đổi.
+                AppVolume.maxCallVolume(this@BlindInCallService)
+                if (!Prefs.autoSpeaker || AudioState.hasHeadset(this@BlindInCallService)) continue
                 if (!isSpeakerOn()) setSpeaker(true)
             }
         }

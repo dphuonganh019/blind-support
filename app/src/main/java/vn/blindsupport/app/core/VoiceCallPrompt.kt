@@ -38,9 +38,8 @@ class VoiceCallPrompt(
     private val onDecline: suspend () -> Unit,
 ) {
     suspend fun run() {
-        // Máy đang để im lặng / rung: tôn trọng lựa chọn đó, không nói to.
-        if (!AudioState.isRingerNormal(context)) return
-        AppVolume.ensureAtLeast(context, 50)
+        // Kể cả khi máy để im lặng / rung vẫn đọc tên người gọi: người khiếm thị có thể đã
+        // vô tình gạt sang im lặng mà không biết. Giọng đọc đi qua luồng "Chuông báo" nên vẫn kêu.
         val kind = if (appName != null) "cuộc gọi $appName" else "cuộc gọi"
         try {
             var round = 0

@@ -11,7 +11,7 @@ import kotlinx.coroutines.delay
 object Beeper {
     suspend fun beep(times: Int = 1) {
         val tg = try {
-            ToneGenerator(AudioManager.STREAM_ALARM, 90)
+            ToneGenerator(AudioManager.STREAM_ALARM, ToneGenerator.MAX_VOLUME)
         } catch (e: Exception) {
             return
         }
@@ -101,11 +101,55 @@ object AppVolume {
         runCatching { am.setStreamVolume(AudioManager.STREAM_ALARM, v.coerceAtLeast(1), 0) }
     }
 
-    /** Tăng/giảm khoảng 20%. Trả về phần trăm mới. */
-    fun step(context: Context, up: Boolean): Int {
-        val p = percent(context)
-        setPercent(context, if (up) p + 20 else p - 20)
-        return percent(context)
+    /** Đặt âm lượng "Chuông báo" theo cài đặt của app (gọi trước mỗi lần đọc). */
+    fun applyVoiceVolume(context: Context) {
+        setPercent(context, Prefs.voiceVolume)
+    }
+
+    /**
+     * Tăng độ to một nấc: trước hết tăng âm lượng máy tới 100%, sau đó tăng mức khuếch đại.
+     * Trả về câu để đọc cho người dùng.
+     */
+    fun louder(context: Context): String {
+        return when {
+            Prefs.voiceVolume < 100 -> {
+                Prefs.voiceVolume = Prefs.voiceVolume + 20
+                applyVoiceVolume(context)
+                "Đã tăng âm lượng, ${Prefs.voiceVolume} phần trăm."
+            }
+            Prefs.boostLevel < 4 -> {
+                Prefs.boostLevel = Prefs.boostLevel + 1
+                "Đã tăng độ to lên mức ${Prefs.boostLevel}."
+            }
+            else -> "Đã to nhất rồi."
+        }
+    }
+
+    /** Giảm độ to một nấc: giảm mức khuếch đại trước, rồi mới giảm âm lượng máy. */
+    fun softer(context: Context): String {
+        return when {
+            Prefs.boostLevel > 1 -> {
+                Prefs.boostLevel = Prefs.boostLevel - 1
+                "Đã giảm độ to xuống mức ${Prefs.boostLevel}."
+            }
+            Prefs.voiceVolume > 30 -> {
+                Prefs.voiceVolume = Prefs.voiceVolume - 20
+                applyVoiceVolume(context)
+                "Đã giảm âm lượng, ${Prefs.voiceVolume} phần trăm."
+            }
+            else -> "Đã nhỏ nhất rồi."
+        }
+    }
+
+    /** Đưa âm lượng cuộc gọi lên tối đa (giọng người bên kia, cả loa ngoài lẫn loa trong). */
+    fun maxCallVolume(context: Context) {
+        if (!Prefs.maxCallVolume) return
+        val am = context.getSystemService(AudioManager::class.java) ?: return
+        runCatching {
+            am.setStreamVolume(
+                AudioManager.STREAM_VOICE_CALL, am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL), 0
+            )
+        }
     }
 }
 

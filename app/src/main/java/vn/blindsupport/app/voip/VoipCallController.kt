@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import vn.blindsupport.app.App
 import vn.blindsupport.app.a11y.UiClicker
+import vn.blindsupport.app.core.AppVolume
 import vn.blindsupport.app.core.AudioState
 import vn.blindsupport.app.core.Prefs
 import vn.blindsupport.app.core.Speaker
@@ -111,6 +112,12 @@ object VoipCallController {
     }
 
     private fun afterAnswered(context: Context, info: VoipCallInfo) {
+        App.appScope.launch {
+            for (wait in longArrayOf(800, 1500, 3000, 5000)) {
+                delay(wait)
+                AppVolume.maxCallVolume(context)
+            }
+        }
         if (!Prefs.autoSpeaker || AudioState.hasHeadset(context)) return
         UiClicker.arm(context, info.pkg, UiClicker.SPEAKER_KEYS, 12_000) { ok ->
             if (!ok) {

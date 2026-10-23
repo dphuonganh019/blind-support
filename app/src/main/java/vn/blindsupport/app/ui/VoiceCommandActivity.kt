@@ -175,14 +175,8 @@ class VoiceCommandActivity : ComponentActivity() {
                     else "Pin còn $pct phần trăm" + if (charging) ", đang sạc." else "."
                 )
             }
-            Command.VolumeUp -> {
-                val p = AppVolume.step(this, up = true)
-                Speaker.speak("Đã tăng âm lượng, $p phần trăm.")
-            }
-            Command.VolumeDown -> {
-                val p = AppVolume.step(this, up = false)
-                Speaker.speak("Đã giảm âm lượng, $p phần trăm.")
-            }
+            Command.VolumeUp -> Speaker.speak(AppVolume.louder(this))
+            Command.VolumeDown -> Speaker.speak(AppVolume.softer(this))
             Command.SpeakSlower -> {
                 Prefs.speechRate = (Prefs.speechRate - 0.15f).coerceAtLeast(0.5f)
                 Speaker.speak("Tôi sẽ nói chậm hơn như thế này.")

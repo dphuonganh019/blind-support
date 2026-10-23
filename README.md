@@ -21,7 +21,7 @@ App Android giúp người khiếm thị nghe gọi điện thoại và nghe tin
 - **"Cuộc gọi nhỡ"** – đọc danh sách cuộc gọi nhỡ trong 24 giờ
 - **"Mấy giờ"**, **"Pin"**
 - **"Danh bạ"** – đọc tên trong danh bạ
-- **"To lên" / "Nhỏ xuống"** – chỉnh âm lượng giọng đọc
+- **"To lên" / "Nhỏ xuống"** – chỉnh độ to giọng đọc
 - **"Nói chậm" / "Nói nhanh"** – chỉnh tốc độ đọc
 - **"Hướng dẫn"** – nghe lại danh sách lệnh
 
@@ -46,7 +46,7 @@ Các bản cập nhật đều được ký cùng một khóa (`keystore/release
    - **Giọng đọc tiếng Việt**: nếu ❌, cài/tải dữ liệu giọng tiếng Việt cho "Dịch vụ giọng nói của Google" (Speech Services by Google) để dùng offline.
 4. Cài **bấm đúp nút nguồn**: Cài đặt → Tính năng nâng cao → Phím sườn → Nhấn hai lần → Mở ứng dụng → **Trợ Lý Nghe Gọi**.
 5. Pin: Cài đặt → Pin → Giới hạn sử dụng nền → **Ứng dụng không bao giờ ngủ** → thêm Trợ Lý Nghe Gọi, **Zalo**, **WhatsApp**. Đặt Pin của 3 app này là **"Không hạn chế"**.
-6. Trong "Cài đặt Trợ Lý": bấm **"Đặt âm lượng giọng đọc 80%"**, **"Thử giọng đọc"**, **"Giả lập cuộc gọi đến"** và **"Thử nhận lệnh giọng nói"**.
+6. Trong "Cài đặt Trợ Lý": chọn **độ to giọng đọc** (mặc định mức 3 – rất to), rồi bấm **"Thử giọng đọc"**, **"Giả lập cuộc gọi đến"** và **"Thử nhận lệnh giọng nói"**. Nên kéo cả thanh **Nhạc chuông** lên tối đa trong Cài đặt → Âm thanh.
 7. Nhập danh bạ với tên dễ đọc (ví dụ "Mẹ", "Anh Hưng") – tên tiếng Việt thường được nhận dạng tốt hơn tên tiếng Anh hay biệt danh có ký hiệu.
 
 ### Danh sách kiểm tra trước khi trao máy
@@ -63,6 +63,14 @@ Các bản cập nhật đều được ký cùng một khóa (`keystore/release
 - [ ] **Khởi động lại máy** rồi lặp lại 1–2 mục trên (app không cần mở lại)
 - [ ] Vuốt tắt hết app ở đa nhiệm rồi thử lại
 
+## Độ to
+
+- Giọng đọc phát qua thanh âm lượng **"Chuông báo"**. App tự đặt thanh này về mức đã chọn (mặc định 100%) trước mỗi lần đọc, nên lỡ kéo nhỏ cũng không sao.
+- Ngoài ra app **khuếch đại giọng đọc bằng phần mềm** (chuẩn hóa + nén động), đo trên giọng tiếng Việt: mức 2 / 3 / 4 to hơn khoảng +4 / +6 / +8 dB. Mức 4 có thể hơi rè.
+- Lệnh **"to lên"**: tăng âm lượng tới 100% rồi tăng mức khuếch đại. **"Nhỏ xuống"**: ngược lại.
+- Khi nghe máy, app đưa **âm lượng cuộc gọi lên tối đa** (sim và Zalo/WhatsApp).
+- Loa điện thoại có giới hạn vật lý. Nếu người dùng nghe rất kém, nên dùng thêm loa Bluetooth hoặc tai nghe/máy trợ thính Bluetooth.
+
 ## App có cần luôn mở không?
 
 Không. App không chạy như app thường mà dựa vào 3 dịch vụ do Android quản lý:
@@ -77,7 +85,7 @@ Ngoài ra app có "người gác" chạy khoảng 15 phút một lần và sau k
 - Bật loa trong Zalo/WhatsApp dựa vào việc tìm nút "Loa" trên màn hình cuộc gọi. Nếu Zalo/WhatsApp đổi giao diện sau một lần cập nhật, có thể không bật được loa (app vẫn nghe máy được và sẽ nói "hãy áp máy lên tai"). Có thể tắt tự cập nhật Zalo/WhatsApp trong Play Store.
 - Khi đang trong một cuộc gọi mà có cuộc gọi chờ, app chỉ đọc tên người gọi (micro đang bận).
 - Nhận dạng giọng nói offline chỉ hiểu các lệnh cố định và tên có trong danh bạ, không hiểu câu tự do.
-- Khi máy để chế độ rung/im lặng, app không đọc to (tôn trọng chế độ của máy).
+- Khi máy để chế độ rung/im lặng: app **vẫn đọc tên người gọi** (để người dùng không lỡ cuộc gọi khi vô tình gạt im lặng), nhưng không đọc tin nhắn.
 
 ## Cấu trúc code
 

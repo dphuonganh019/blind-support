@@ -23,7 +23,6 @@ import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import vn.blindsupport.app.App
-import vn.blindsupport.app.core.AppVolume
 import vn.blindsupport.app.core.HealthCheck
 import vn.blindsupport.app.core.Prefs
 import vn.blindsupport.app.core.Speaker
@@ -38,6 +37,12 @@ import vn.blindsupport.app.notify.BlindNotificationListener
 class SetupActivity : ComponentActivity() {
 
     private lateinit var checks: LinearLayout
+    private lateinit var loudnessLabel: TextView
+
+    private fun renderLoudness() {
+        loudnessLabel.text = "Hiện tại: âm lượng ${Prefs.voiceVolume}%, khuếch đại mức ${Prefs.boostLevel}, " +
+            "tốc độ đọc ${"%.2f".format(Prefs.speechRate)}"
+    }
 
     private val runtimePermissions: Array<String>
         get() = buildList {
@@ -80,10 +85,37 @@ class SetupActivity : ComponentActivity() {
         col.addView(button("Thử giọng đọc") {
             lifecycleScope.launch { Speaker.speak("Xin chào. Đây là giọng đọc của Trợ Lý Nghe Gọi.") }
         })
-        col.addView(button("Đặt âm lượng giọng đọc 80%") {
-            AppVolume.setPercent(this, 80)
-            lifecycleScope.launch { Speaker.speak("Âm lượng giọng đọc tám mươi phần trăm.") }
+        col.addView(heading("Độ to giọng đọc"))
+        loudnessLabel = note("")
+        col.addView(loudnessLabel)
+        col.addView(note(
+            "Giọng đọc dùng thanh âm lượng \"Chuông báo\". App tự đặt lại thanh này trước mỗi lần đọc, " +
+                "rồi khuếch đại thêm bằng phần mềm. Mức 3 hợp với người nghe kém; mức 4 to nhất nhưng có thể hơi rè."
+        ))
+        for ((level, title) in listOf(
+            1 to "Mức 1 – bình thường",
+            2 to "Mức 2 – to",
+            3 to "Mức 3 – rất to (khuyên dùng)",
+            4 to "Mức 4 – to nhất",
+        )) {
+            col.addView(button(title) {
+                Prefs.voiceVolume = 100
+                Prefs.boostLevel = level
+                renderLoudness()
+                lifecycleScope.launch { Speaker.speak("Mức $level. Có cuộc gọi từ Mẹ. Bạn có muốn nghe không?") }
+            })
+        }
+        col.addView(button("Đọc chậm hơn") {
+            Prefs.speechRate = (Prefs.speechRate - 0.1f).coerceAtLeast(0.5f)
+            renderLoudness()
+            lifecycleScope.launch { Speaker.speak("Tôi sẽ đọc với tốc độ này.") }
         })
+        col.addView(button("Đọc nhanh hơn") {
+            Prefs.speechRate = (Prefs.speechRate + 0.1f).coerceAtMost(1.8f)
+            renderLoudness()
+            lifecycleScope.launch { Speaker.speak("Tôi sẽ đọc với tốc độ này.") }
+        })
+        renderLoudness()
         col.addView(button("Thử nhận lệnh giọng nói") {
             startActivity(Intent(this, VoiceCommandActivity::class.java))
         })
@@ -92,6 +124,7 @@ class SetupActivity : ComponentActivity() {
         col.addView(heading("3. Tùy chọn"))
         col.addView(toggle("Hỏi \"có muốn nghe không\" và nghe câu trả lời bằng giọng nói", Prefs.voiceAnswer) { Prefs.voiceAnswer = it })
         col.addView(toggle("Tự bật loa ngoài khi nghe máy", Prefs.autoSpeaker) { Prefs.autoSpeaker = it })
+        col.addView(toggle("Âm lượng cuộc gọi tối đa khi nghe máy", Prefs.maxCallVolume) { Prefs.maxCallVolume = it })
         col.addView(toggle("Báo cuộc gọi Zalo / WhatsApp", Prefs.voipCalls) { Prefs.voipCalls = it })
         col.addView(toggle("Đọc tin nhắn Zalo", Prefs.readZalo) { Prefs.readZalo = it })
         col.addView(toggle("Đọc tin nhắn WhatsApp", Prefs.readWhatsapp) { Prefs.readWhatsapp = it })

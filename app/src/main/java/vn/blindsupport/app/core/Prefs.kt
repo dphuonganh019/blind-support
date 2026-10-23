@@ -63,9 +63,28 @@ object Prefs {
         get() = bool("announce_battery", true)
         set(v) = setBool("announce_battery", v)
 
+    /** Tốc độ đọc; mặc định chậm hơn bình thường một chút cho người lớn tuổi. */
     var speechRate: Float
-        get() = sp.getFloat("speech_rate", 0.95f)
+        get() = sp.getFloat("speech_rate", 0.85f)
         set(v) = sp.edit().putFloat("speech_rate", v).apply()
+
+    /** Âm lượng hệ thống cho giọng đọc (10–100%). App đặt lại mức này trước mỗi lần đọc. */
+    var voiceVolume: Int
+        get() = sp.getInt("voice_volume", 100)
+        set(v) = sp.edit().putInt("voice_volume", v.coerceIn(10, 100)).apply()
+
+    /**
+     * Mức khuếch đại giọng đọc bằng phần mềm, vượt trên 100% âm lượng của máy:
+     * 1 = bình thường, 2 = to gấp đôi, 3 = gấp ba, 4 = gấp bốn (có thể hơi rè).
+     */
+    var boostLevel: Int
+        get() = sp.getInt("boost_level", 3)
+        set(v) = sp.edit().putInt("boost_level", v.coerceIn(1, 4)).apply()
+
+    /** Đưa âm lượng cuộc gọi (giọng người bên kia) lên tối đa mỗi khi nghe máy. */
+    var maxCallVolume: Boolean
+        get() = sp.getBoolean("max_call_volume", true)
+        set(v) = sp.edit().putBoolean("max_call_volume", v).apply()
 
     /** Âm lượng chuông gốc khi app tạm hạ chuông; -1 nghĩa là không có gì cần trả lại. */
     var savedRingVolume: Int
