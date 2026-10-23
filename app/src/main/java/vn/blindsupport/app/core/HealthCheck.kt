@@ -115,6 +115,8 @@ object HealthCheck {
 
     fun isAutoRevokeOff(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < 30) return true
+        // Ứng dụng điện thoại mặc định được hệ thống miễn thu hồi quyền (công tắc bị khóa xám).
+        if (isDefaultDialer(context)) return true
         return runCatching { context.packageManager.isAutoRevokeWhitelisted }.getOrDefault(false)
     }
 
