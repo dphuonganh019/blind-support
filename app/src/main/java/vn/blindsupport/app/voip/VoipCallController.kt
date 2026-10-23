@@ -18,6 +18,7 @@ import vn.blindsupport.app.core.Prefs
 import vn.blindsupport.app.core.Speaker
 import vn.blindsupport.app.core.TextUtils
 import vn.blindsupport.app.core.VoiceCallPrompt
+import vn.blindsupport.app.core.VoiceRecognizer
 import vn.blindsupport.app.notify.AppIds
 import vn.blindsupport.app.notify.VoipCallInfo
 
@@ -53,6 +54,8 @@ object VoipCallController {
         current = info
         _state.value = State.RINGING
         Speaker.stop()
+        // Nạp model nhận dạng giọng nói song song với lúc đọc tên người gọi.
+        VoiceRecognizer.preload(context.applicationContext, App.appScope)
         VoipCallActivity.start(context)
 
         val app = context.applicationContext

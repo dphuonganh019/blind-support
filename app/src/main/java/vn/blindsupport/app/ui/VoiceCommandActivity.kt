@@ -43,6 +43,7 @@ class VoiceCommandActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         BigUi.showOverLockScreen(this)
+        VoiceRecognizer.preload(applicationContext, lifecycleScope)
         val root = BigUi.column(this)
         statusView = BigUi.title(this, 28f).apply { text = "Đang chuẩn bị..." }
         val again: Button = BigUi.bigButton(this, BigUi.GREEN).apply {

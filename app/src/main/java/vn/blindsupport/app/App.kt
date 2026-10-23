@@ -9,7 +9,6 @@ import vn.blindsupport.app.core.MessageStore
 import vn.blindsupport.app.core.Prefs
 import vn.blindsupport.app.core.RingVolumeGuard
 import vn.blindsupport.app.core.Speaker
-import vn.blindsupport.app.core.VoiceRecognizer
 import vn.blindsupport.app.notify.MessageAnnouncer
 
 class App : Application() {
@@ -23,8 +22,8 @@ class App : Application() {
         Speaker.init(this)
         // Nếu lần trước app bị tắt đột ngột khi đang hạ nhỏ chuông thì trả lại âm lượng chuông.
         RingVolumeGuard.restoreIfStale(this)
-        // Nạp sẵn model nhận dạng giọng nói để khi có cuộc gọi phản hồi nhanh hơn.
-        VoiceRecognizer.preload(this, appScope)
+        // Model nhận dạng giọng nói (~100MB RAM) KHÔNG nạp ở đây: chỉ nạp khi có cuộc gọi hoặc
+        // khi mở lệnh giọng nói, để tiết kiệm pin và bộ nhớ khi app chỉ đọc tin nhắn.
         // Hàng đợi đọc tin/thông báo luôn sẵn sàng trong tiến trình.
         MessageAnnouncer.start(this)
         // Lên lịch "người gác" kiểm tra định kỳ.
