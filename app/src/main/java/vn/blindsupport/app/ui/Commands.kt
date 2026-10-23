@@ -76,9 +76,12 @@ object CommandParser {
     fun matchContact(spoken: String, contacts: List<Contact>): Contact? {
         if (spoken.isBlank()) return null
         contacts.firstOrNull { it.normalizedName == spoken }?.let { return it }
-        return contacts
-            .filter { spoken.contains(it.normalizedName) || it.normalizedName.contains(spoken) }
-            .maxByOrNull { it.normalizedName.length }
+        // Câu nói chứa trọn tên trong danh bạ: lấy tên dài nhất.
+        contacts.filter { " $spoken ".contains(" ${it.normalizedName} ") }
+            .maxByOrNull { it.normalizedName.length }?.let { return it }
+        // Chỉ nói một phần tên (ví dụ "Hưng" cho "Anh Hưng"): chỉ nhận khi không bị nhầm với người khác.
+        val partial = contacts.filter { " ${it.normalizedName} ".contains(" $spoken ") }
+        return partial.singleOrNull()
     }
 
     fun isYes(text: String): Boolean {

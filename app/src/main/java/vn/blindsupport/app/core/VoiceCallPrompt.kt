@@ -6,7 +6,7 @@ import kotlinx.coroutines.delay
 enum class CallIntent { ANSWER, DECLINE;
 
     companion object {
-        val ANSWER_WORDS = listOf("nghe", "nghe máy", "nghe đi", "có", "vâng", "ừ", "bắt máy", "trả lời", "đồng ý", "alo", "ok")
+        val ANSWER_WORDS = listOf("nghe", "nghe máy", "nghe đi", "có", "vâng", "ừ", "bắt máy", "trả lời", "đồng ý", "ok")
         val DECLINE_WORDS = listOf("không", "không nghe", "từ chối", "thôi", "bận", "tắt", "tắt máy", "cúp máy")
         val PHRASES = ANSWER_WORDS + DECLINE_WORDS
 
