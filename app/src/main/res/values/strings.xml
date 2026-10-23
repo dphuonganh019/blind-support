@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Trợ Lý Nghe Gọi</string>
+    <string name="setup_name">Cài đặt Trợ Lý</string>
+    <string name="dial_name">Bàn phím gọi</string>
+    <string name="a11y_label">Trợ Lý Nghe Gọi – bật loa Zalo/WhatsApp</string>
+    <string name="a11y_description">Cho phép Trợ Lý Nghe Gọi tự bấm nút nghe máy và nút loa ngoài trong cuộc gọi Zalo và WhatsApp cho người khiếm thị. Ứng dụng chỉ thao tác trong Zalo và WhatsApp, chỉ khi có cuộc gọi đến.</string>
+</resources>
