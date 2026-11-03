@@ -17,6 +17,12 @@ object TextUtils {
         return sb.toString().replace(Regex("\\s+"), " ").trim()
     }
 
+    /** Bỏ dấu tiếng Việt để tìm kiếm: "Nguyễn Đức" → "nguyen duc". */
+    fun fold(s: String): String {
+        val n = Normalizer.normalize(normalize(s), Normalizer.Form.NFD)
+        return n.replace(Regex("\\p{Mn}+"), "").replace('đ', 'd')
+    }
+
     /** Các từ của câu sau khi chuẩn hóa. */
     fun words(s: String): List<String> = normalize(s).split(' ').filter { it.isNotEmpty() }
 

@@ -136,6 +136,7 @@ class BlindInCallService : InCallService() {
         val wasAnswered = answeredCalls.remove(call)
         val cause = call.details.disconnectCause?.code
         CallManager.notifyChanged()
+        if (cause == DisconnectCause.MISSED) CallNotifications.showMissed(this, call.displayName(this))
 
         val remaining = calls.filter { it.stateCompat() != Call.STATE_DISCONNECTED }
         if (remaining.isEmpty()) CallNotifications.cancel(this)

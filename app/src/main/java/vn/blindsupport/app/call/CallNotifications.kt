@@ -15,6 +15,8 @@ object CallNotifications {
     const val CH_STATUS = "status"
     private const val ID_CALL = 1001
     const val ID_VOIP = 1002
+    private const val ID_MISSED = 1003
+    const val CH_MISSED = "calls_missed"
 
     fun createChannels(context: Context) {
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
@@ -40,6 +42,12 @@ object CallNotifications {
         )
         nm.createNotificationChannel(
             NotificationChannel(CH_STATUS, "Trạng thái", NotificationManager.IMPORTANCE_LOW)
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(CH_MISSED, "Cuộc gọi nhỡ", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                // Giọng đọc đã báo cuộc gọi nhỡ, thông báo này chỉ để người sáng mắt nhìn thấy.
+                setSound(null, null)
+            }
         )
     }
 
@@ -89,6 +97,35 @@ object CallNotifications {
             .addAction(Notification.Action.Builder(null, "Kết thúc", action(context, CallActionReceiver.HANGUP, 3)).build())
             .build()
         runCatching { nm.notify(ID_CALL, n) }
+    }
+
+    private var missedCount = 0
+
+    /** Thông báo cuộc gọi nhỡ (ứng dụng điện thoại mặc định phải tự hiện thông báo này). */
+    fun showMissed(context: Context, name: String) {
+        val nm = context.getSystemService(NotificationManager::class.java) ?: return
+        missedCount++
+        val open = PendingIntent.getActivity(
+            context, 10,
+            Intent(context, vn.blindsupport.app.ui.PhoneActivity::class.java)
+                .putExtra(vn.blindsupport.app.ui.PhoneActivity.EXTRA_TAB, vn.blindsupport.app.ui.PhoneActivity.TAB_RECENT)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val n = Notification.Builder(context, CH_MISSED)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(if (missedCount > 1) "$missedCount cuộc gọi nhỡ" else "Cuộc gọi nhỡ")
+            .setContentText(if (missedCount > 1) "Gần nhất: $name" else name)
+            .setCategory(Notification.CATEGORY_MISSED_CALL)
+            .setAutoCancel(true)
+            .setContentIntent(open)
+            .build()
+        runCatching { nm.notify(ID_MISSED, n) }
+    }
+
+    fun cancelMissed(context: Context) {
+        missedCount = 0
+        context.getSystemService(NotificationManager::class.java)?.cancel(ID_MISSED)
     }
 
     fun cancel(context: Context) {

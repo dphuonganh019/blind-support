@@ -13,6 +13,8 @@ data class Contact(val name: String, val number: String) {
 
 data class MissedCall(val name: String?, val number: String?, val time: Long)
 
+data class RecentCall(val name: String?, val number: String?, val type: Int, val time: Long)
+
 object ContactsRepo {
 
     private fun canReadContacts(c: Context) =
@@ -59,6 +61,54 @@ object ContactsRepo {
             }
         }
         return result.values.toList()
+    }
+
+    /** Mọi số điện thoại trong danh bạ (một người nhiều số thì có nhiều dòng), xếp theo tên. */
+    fun allPhoneEntries(context: Context): List<Contact> {
+        if (!canReadContacts(context)) return emptyList()
+        val seen = HashSet<String>()
+        val out = ArrayList<Contact>()
+        runCatching {
+            context.contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(
+                    ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                    ContactsContract.CommonDataKinds.Phone.NUMBER,
+                ),
+                null, null,
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " COLLATE LOCALIZED ASC"
+            )?.use { c ->
+                while (c.moveToNext()) {
+                    val name = c.getString(0)?.trim().orEmpty()
+                    val number = c.getString(1) ?: continue
+                    val key = name + "|" + number.filter { it.isDigit() }
+                    if (!seen.add(key)) continue
+                    out += Contact(name.ifEmpty { number }, number)
+                }
+            }
+        }
+        return out
+    }
+
+    /** Nhật ký cuộc gọi gần nhất (mọi loại), mới nhất trước. */
+    fun recentCalls(context: Context, limit: Int): List<RecentCall> {
+        if (!canReadCallLog(context)) return emptyList()
+        val list = mutableListOf<RecentCall>()
+        runCatching {
+            context.contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(CallLog.Calls.CACHED_NAME, CallLog.Calls.NUMBER, CallLog.Calls.TYPE, CallLog.Calls.DATE),
+                null, null,
+                CallLog.Calls.DATE + " DESC"
+            )?.use { c ->
+                while (c.moveToNext() && list.size < limit) {
+                    val number = c.getString(1)?.takeIf { it.isNotBlank() }
+                    val name = c.getString(0)?.takeIf { it.isNotBlank() }
+                    list += RecentCall(name, number, c.getInt(2), c.getLong(3))
+                }
+            }
+        }
+        return list
     }
 
     /** Cuộc gọi nhỡ trong [withinMs] gần nhất, mới nhất trước. */

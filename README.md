@@ -63,6 +63,19 @@ Các bản cập nhật đều được ký cùng một khóa (`keystore/release
 - [ ] **Khởi động lại máy** rồi lặp lại 1–2 mục trên (app không cần mở lại)
 - [ ] Vuốt tắt hết app ở đa nhiệm rồi thử lại
 
+## Người khác dùng máy để gọi (khách đến thăm, người hỗ trợ)
+
+Khi Trợ Lý là ứng dụng điện thoại mặc định, app **Điện thoại của Samsung sẽ không cho gọi** (bấm "Lúc khác" là nó tự đóng). Thay vào đó dùng biểu tượng **"Điện thoại"** (nền xanh dương) của Trợ Lý:
+
+- **Bàn phím**: bấm số → **GỌI**. Bên dưới số hiện tên nếu có trong danh bạ. Nút **Lưu số** để thêm vào danh bạ.
+- **Gần đây**: nhật ký cuộc gọi (gọi đến, gọi đi, gọi nhỡ). Nút **GỌI** để gọi lại; chạm vào dòng để đưa số lên bàn phím.
+- **Danh bạ**: ô tìm kiếm (gõ không dấu cũng được, ví dụ "nguyen"), nút **+ Thêm**.
+- Trong lúc gọi có nút **BÀN PHÍM** để bấm phím khi gọi tổng đài.
+- App **Danh bạ** của Samsung vẫn dùng bình thường; bấm gọi từ đó cuộc gọi vẫn đi.
+- Cuộc gọi nhỡ hiện thông báo trên thanh trạng thái; chạm vào để mở danh sách Gần đây.
+
+Nên **gỡ biểu tượng Điện thoại của Samsung khỏi màn hình chính** và đặt biểu tượng "Điện thoại" của Trợ Lý vào đúng chỗ đó, để khách cầm máy là thấy ngay.
+
 ## Độ to
 
 - Giọng đọc phát qua thanh âm lượng **"Chuông báo"**. App tự đặt thanh này về mức đã chọn (mặc định 100%) trước mỗi lần đọc, nên lỡ kéo nhỏ cũng không sao.

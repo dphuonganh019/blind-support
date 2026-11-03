@@ -27,6 +27,7 @@ class InCallActivity : ComponentActivity() {
     private lateinit var statusView: TextView
     private lateinit var topButton: Button
     private lateinit var bottomButton: Button
+    private lateinit var keypadButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,9 +38,17 @@ class InCallActivity : ComponentActivity() {
         statusView = BigUi.title(this, 22f)
         topButton = BigUi.bigButton(this, BigUi.GREEN)
         bottomButton = BigUi.bigButton(this, BigUi.RED)
+        // Bàn phím trong cuộc gọi (bấm phím khi gọi tổng đài). Nhỏ hơn hai nút chính.
+        keypadButton = BigUi.bigButton(this, BigUi.GREY).apply {
+            text = "BÀN PHÍM"
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 24f)
+            layoutParams = (layoutParams as android.widget.LinearLayout.LayoutParams).apply { weight = 0.45f }
+            setOnClickListener { CallManager.primaryCall()?.let { showDtmfPad(it) } }
+        }
         root.addView(nameView)
         root.addView(statusView)
         root.addView(topButton)
+        root.addView(keypadButton)
         root.addView(bottomButton)
         setContentView(root)
 
@@ -65,6 +74,7 @@ class InCallActivity : ComponentActivity() {
         nameView.text = call.displayName(this)
         when (call.stateCompat()) {
             Call.STATE_RINGING -> {
+                keypadButton.visibility = android.view.View.GONE
                 statusView.text = "Cuộc gọi đến"
                 topButton.text = "NGHE"
                 BigUi.setButtonColor(topButton, BigUi.GREEN)
@@ -81,6 +91,8 @@ class InCallActivity : ComponentActivity() {
                 bottomButton.setOnLongClickListener(null)
             }
             else -> {
+                keypadButton.visibility =
+                    if (call.stateCompat() == Call.STATE_ACTIVE) android.view.View.VISIBLE else android.view.View.GONE
                 statusView.text = statusText(call)
                 val speaker = CallManager.isSpeakerOn()
                 topButton.text = if (speaker) "LOA NGOÀI: ĐANG BẬT" else "LOA NGOÀI: ĐANG TẮT"
@@ -100,6 +112,41 @@ class InCallActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun showDtmfPad(call: Call) {
+        val typed = StringBuilder()
+        val display = android.widget.TextView(this).apply {
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 30f)
+            gravity = android.view.Gravity.CENTER
+            text = " "
+        }
+        val grid = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            val p = BigUi.dp(this@InCallActivity, 8)
+            setPadding(p, p, p, p)
+            addView(display)
+        }
+        for (row in listOf("123", "456", "789", "*0#")) {
+            val r = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.HORIZONTAL }
+            for (ch in row) {
+                r.addView(Button(this).apply {
+                    text = ch.toString()
+                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 28f)
+                    setOnClickListener {
+                        typed.append(ch)
+                        display.text = typed
+                        runCatching { call.playDtmfTone(ch) }
+                        postDelayed({ runCatching { call.stopDtmfTone() } }, 180)
+                    }
+                }, android.widget.LinearLayout.LayoutParams(0, BigUi.dp(this@InCallActivity, 72), 1f))
+            }
+            grid.addView(r)
+        }
+        android.app.AlertDialog.Builder(this)
+            .setView(grid)
+            .setPositiveButton("Đóng", null)
+            .show()
     }
 
     private fun statusText(call: Call): String = when (call.stateCompat()) {

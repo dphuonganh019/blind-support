@@ -79,12 +79,20 @@
             </intent-filter>
         </activity>
 
-        <!-- Bàn phím gọi số: bắt buộc để được làm ứng dụng điện thoại mặc định. -->
+        <!-- Ứng dụng điện thoại đầy đủ (bàn phím, gần đây, danh bạ) cho người sáng mắt.
+             Bắt buộc phải có để được làm ứng dụng điện thoại mặc định. -->
         <activity
-            android:name=".ui.DialActivity"
+            android:name=".ui.PhoneActivity"
             android:exported="true"
+            android:icon="@mipmap/ic_launcher_phone"
             android:label="@string/dial_name"
-            android:taskAffinity="vn.blindsupport.dial">
+            android:launchMode="singleTask"
+            android:taskAffinity="vn.blindsupport.dial"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.DIAL" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -95,6 +103,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="tel" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.android.cursor.dir/calls" />
             </intent-filter>
         </activity>
 
