@@ -33,10 +33,17 @@ class BlindNotificationListener : NotificationListenerService() {
         MessageAnnouncer.start(this)
         RingVolumeGuard.restoreIfStale(this)
         registerBattery()
-        // Bắt kịp cuộc gọi Zalo đang đổ chuông nếu dịch vụ vừa được khởi động lại.
+        // Bắt kịp trạng thái cuộc gọi Zalo/WhatsApp nếu dịch vụ vừa được khởi động lại.
+        ongoingVoipKeys.clear()
         runCatching { activeNotifications }.getOrNull()?.forEach { sbn ->
-            NotificationParser.incomingVoipCall(sbn)?.let { if (Prefs.voipCalls) VoipCallController.onIncoming(this, it) }
+            val incoming = NotificationParser.incomingVoipCall(sbn)
+            if (incoming != null) {
+                if (Prefs.voipCalls) VoipCallController.onIncoming(this, incoming)
+            } else if (NotificationParser.isOngoingVoipCall(sbn)) {
+                ongoingVoipKeys += sbn.key
+            }
         }
+        voipCallInProgress = ongoingVoipKeys.isNotEmpty()
     }
 
     override fun onListenerDisconnected() {
@@ -70,6 +77,7 @@ class BlindNotificationListener : NotificationListenerService() {
         // 2) Cuộc gọi Zalo/WhatsApp đang diễn ra
         if (NotificationParser.isOngoingVoipCall(sbn)) {
             ongoingVoipKeys += sbn.key
+            voipCallInProgress = true
             VoipCallController.onCallInProgress(sbn.key)
             return
         }
@@ -97,6 +105,7 @@ class BlindNotificationListener : NotificationListenerService() {
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         VoipCallController.onNotificationRemoved(this, sbn.key)
         if (ongoingVoipKeys.remove(sbn.key)) {
+            voipCallInProgress = ongoingVoipKeys.isNotEmpty()
             VoipCallController.dismissUi()
             MessageAnnouncer.onCallEnded(this)
         }
@@ -168,6 +177,9 @@ class BlindNotificationListener : NotificationListenerService() {
     companion object {
         private const val TAG = "BlindNLS"
         @Volatile var connected = false
+            private set
+        /** Đang có cuộc gọi Zalo/WhatsApp (theo thông báo "đang gọi" của chúng). */
+        @Volatile var voipCallInProgress = false
             private set
     }
 }

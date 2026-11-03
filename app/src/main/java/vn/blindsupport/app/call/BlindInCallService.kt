@@ -102,8 +102,16 @@ class BlindInCallService : InCallService() {
                 isRinging = { call.stateCompat() == Call.STATE_RINGING },
                 onAnswer = { CallManager.answer(call) },
                 onDecline = { CallManager.decline(call) },
+                silenceRinger = { CallManager.silenceRinger(this@BlindInCallService) },
             ).run()
         }
+    }
+
+    /** Phím giảm âm lượng khi đang đổ chuông: ngừng hỏi và tắt chuông, KHÔNG từ chối cuộc gọi. */
+    fun silenceRinging() {
+        val ringing = calls.filter { it.stateCompat() == Call.STATE_RINGING }
+        ringing.forEach { stopPrompt(it) }
+        CallManager.silenceRinger(this)
     }
 
     private fun stopPrompt(call: Call) {

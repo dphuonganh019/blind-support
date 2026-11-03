@@ -86,10 +86,27 @@ object NotificationParser {
                 decline = n.extras.parcel<PendingIntent>(Notification.EXTRA_DECLINE_INTENT)
             }
         }
-        if (answer == null && !incomingByStyle) return null
+        if (answer == null && !incomingByStyle && !looksIncoming(n)) return null
 
         val name = callerName(n) ?: "người gọi không rõ tên"
         return VoipCallInfo(sbn.key, sbn.packageName, name, answer, decline)
+    }
+
+    private val INCOMING_TEXT = listOf(
+        "cuộc gọi đến", "gọi đến", "đang gọi cho bạn", "đang gọi bạn", "cuộc gọi thoại đến", "cuộc gọi video đến",
+        "incoming voice call", "incoming video call", "incoming call", "calling you",
+    )
+
+    /** Thông báo cuộc gọi không có nút Trả lời nhưng nội dung cho thấy đang có cuộc gọi đến. */
+    private fun looksIncoming(n: Notification): Boolean {
+        val text = TextUtils.normalize(
+            listOfNotNull(
+                n.extras.getCharSequence(Notification.EXTRA_TITLE),
+                n.extras.getCharSequence(Notification.EXTRA_TEXT),
+                n.extras.getCharSequence(Notification.EXTRA_SUB_TEXT),
+            ).joinToString(" ")
+        )
+        return n.fullScreenIntent != null && INCOMING_TEXT.any { text.contains(TextUtils.normalize(it)) }
     }
 
     /** Cuộc gọi Zalo/WhatsApp đang diễn ra (không còn nút trả lời). */

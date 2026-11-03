@@ -84,12 +84,14 @@ class InCallActivity : ComponentActivity() {
                     CallManager.answer(call)
                 }
                 topButton.setOnLongClickListener(null)
-                bottomButton.text = "TỪ CHỐI"
-                bottomButton.setOnClickListener {
+                // Từ chối phải GIỮ nút: người khiếm thị cầm máy dễ chạm nhầm nửa dưới màn hình.
+                bottomButton.text = "GIỮ ĐỂ TỪ CHỐI"
+                bottomButton.setOnClickListener(null)
+                bottomButton.setOnLongClickListener {
                     Speaker.stop()
                     CallManager.decline(call)
+                    true
                 }
-                bottomButton.setOnLongClickListener(null)
             }
             else -> {
                 keypadButton.visibility =
@@ -174,8 +176,9 @@ class InCallActivity : ComponentActivity() {
                     return true
                 }
                 KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                    // Chỉ tắt chuông và ngừng hỏi, không từ chối (dễ bấm nhầm khi muốn vặn nhỏ).
                     Speaker.stop()
-                    CallManager.decline(ringing)
+                    CallManager.service?.silenceRinging()
                     return true
                 }
             }

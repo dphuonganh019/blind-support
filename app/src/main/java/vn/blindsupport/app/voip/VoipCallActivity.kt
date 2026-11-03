@@ -35,8 +35,11 @@ class VoipCallActivity : ComponentActivity() {
             setOnClickListener { VoipCallController.answer(this@VoipCallActivity) }
         }
         declineButton = BigUi.bigButton(this, BigUi.RED).apply {
-            text = "TỪ CHỐI"
-            setOnClickListener { VoipCallController.decline(this@VoipCallActivity) }
+            text = "GIỮ ĐỂ TỪ CHỐI"
+            setOnLongClickListener {
+                VoipCallController.decline(this@VoipCallActivity)
+                true
+            }
         }
         root.addView(nameView)
         root.addView(statusView)
@@ -67,7 +70,8 @@ class VoipCallActivity : ComponentActivity() {
                     return true
                 }
                 KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                    VoipCallController.decline(this)
+                    // Chỉ ngừng hỏi, không từ chối.
+                    VoipCallController.stopAsking()
                     return true
                 }
             }

@@ -142,6 +142,11 @@ object VoipCallController {
         }
     }
 
+    /** Ngừng đọc/hỏi nhưng vẫn để cuộc gọi đổ chuông. */
+    fun stopAsking() {
+        stopPrompt()
+    }
+
     fun dismissUi() {
         if (_state.value == State.ANSWERED) {
             _state.value = State.IDLE

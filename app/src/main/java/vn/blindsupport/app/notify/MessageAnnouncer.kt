@@ -94,7 +94,10 @@ object MessageAnnouncer {
             VoipCallController.isRinging() ||
             VoiceSession.active
 
+    /**
+     * Chỉ giờ yên tĩnh (nếu bật) mới chặn đọc tin. Máy để im lặng/rung KHÔNG chặn: người khiếm
+     * thị không nhìn thấy biểu tượng im lặng nên sẽ tưởng app hỏng.
+     */
     private fun isQuiet(context: Context): Boolean =
-        !AudioState.isRingerNormal(context) ||
-            Prefs.isQuietNow(Calendar.getInstance().get(Calendar.HOUR_OF_DAY))
+        Prefs.isQuietNow(Calendar.getInstance().get(Calendar.HOUR_OF_DAY))
 }

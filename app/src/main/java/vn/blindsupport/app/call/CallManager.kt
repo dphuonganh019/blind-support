@@ -86,6 +86,14 @@ object CallManager {
         runCatching { call.disconnect() }
     }
 
+    /** Tắt chuông cuộc gọi đang đổ (ứng dụng điện thoại mặc định được phép). */
+    fun silenceRinger(context: Context): Boolean = try {
+        context.getSystemService(TelecomManager::class.java)?.silenceRinger()
+        true
+    } catch (e: Exception) {
+        false
+    }
+
     fun isSpeakerOn(): Boolean = service?.isSpeakerOn() == true
 
     fun setSpeaker(on: Boolean) {

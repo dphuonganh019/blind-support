@@ -6,10 +6,10 @@ App Android giúp người khiếm thị nghe gọi điện thoại và nghe tin
 
 | Tình huống | App làm gì |
 |---|---|
-| Có cuộc gọi sim đến | Đọc tên trong danh bạ (hoặc đọc từng số), hỏi *"Bạn có muốn nghe không?"*. Nói **"nghe"** → nhấc máy và bật loa ngoài. Nói **"không"** → từ chối. Phím tăng âm lượng = nghe, phím giảm âm lượng = từ chối. |
+| Có cuộc gọi sim đến | Đọc tên trong danh bạ (hoặc đọc từng số), hỏi *"Bạn có muốn nghe không?"*. Nói **"nghe"** → nhấc máy và bật loa ngoài. Nói **"không"** → từ chối. Phím tăng âm lượng = nghe; phím giảm âm lượng = **tắt chuông, ngừng hỏi** (không từ chối). Trên màn hình phải **giữ** nút mới từ chối được. Trong lúc app chờ câu trả lời, chuông cuộc gọi sim được tắt để tiếng chuông không lọt vào micro gây nhận nhầm. |
 | Có cuộc gọi Zalo / WhatsApp | Như trên, dùng nút Trả lời/Từ chối trong thông báo của Zalo/WhatsApp; sau khi nghe máy, app tự bấm nút **Loa** (cần bật Trợ năng). Nếu không bấm được loa, app nói *"hãy áp máy lên tai"*. |
 | Cuộc gọi nhỡ (sim, Zalo, WhatsApp) | Đọc to: *"Bạn vừa nhỡ cuộc gọi từ …"* |
-| Tin nhắn Zalo, WhatsApp, SMS | Đọc to người gửi và nội dung. Tin nhóm mặc định chỉ lưu lại, không đọc to. Đang gọi điện, máy để im lặng hoặc giờ yên tĩnh (22h–6h) thì không đọc, lưu lại để nghe sau. |
+| Tin nhắn Zalo, WhatsApp, SMS | Đọc to người gửi và nội dung. Tin nhóm mặc định chỉ lưu lại, không đọc to. Đang gọi điện thì không đọc, lưu lại để nghe sau. Máy để im lặng **vẫn đọc**. Có thể bật **giờ yên tĩnh** (22h–6h, mặc định tắt) để không đọc tin ban đêm. |
 | Bấm đúp nút nguồn | Mở chế độ nghe lệnh (xem bảng lệnh bên dưới). |
 | Pin | Báo pin yếu (20%, 10%, 5%), cắm sạc, rút sạc, sạc đầy. |
 
@@ -103,7 +103,8 @@ Ngoài ra app có "người gác" chạy khoảng 15 phút một lần và sau k
 - Bật loa trong Zalo/WhatsApp dựa vào việc tìm nút "Loa" trên màn hình cuộc gọi. Nếu Zalo/WhatsApp đổi giao diện sau một lần cập nhật, có thể không bật được loa (app vẫn nghe máy được và sẽ nói "hãy áp máy lên tai"). Có thể tắt tự cập nhật Zalo/WhatsApp trong Play Store.
 - Khi đang trong một cuộc gọi mà có cuộc gọi chờ, app chỉ đọc tên người gọi (micro đang bận).
 - Nhận dạng giọng nói offline chỉ hiểu các lệnh cố định và tên có trong danh bạ, không hiểu câu tự do.
-- Khi máy để chế độ rung/im lặng: app **vẫn đọc tên người gọi** (để người dùng không lỡ cuộc gọi khi vô tình gạt im lặng), nhưng không đọc tin nhắn.
+- Khi máy để chế độ rung/im lặng: app **vẫn đọc tên người gọi và tin nhắn** (người khiếm thị không nhìn thấy máy đang im lặng). Muốn yên tĩnh ban đêm thì bật "giờ yên tĩnh" trong Cài đặt Trợ Lý.
+- Nhận dạng giọng nói chỉ chấp nhận câu ngắn gồm toàn từ của một lệnh ("nghe", "nghe máy", "không", "từ chối"...). Tiếng ồn, tiếng TV, người xung quanh nói chuyện bị bỏ qua.
 
 ## Cấu trúc code
 

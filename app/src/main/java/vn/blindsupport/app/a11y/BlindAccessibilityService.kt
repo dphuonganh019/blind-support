@@ -74,7 +74,7 @@ class BlindAccessibilityService : AccessibilityService() {
             visited++
             if (matches(node, normKeys)) {
                 // Nút loa dạng bật/tắt đã ở trạng thái bật: không bấm nữa kẻo lại tắt.
-                if (node.isCheckable && node.isChecked) return Result.ALREADY_ON
+                if ((node.isCheckable && node.isChecked) || node.isSelected) return Result.ALREADY_ON
                 val label = label(node)
                 if (label.contains(" tắt loa ") || label.contains(" speaker on ")) return Result.ALREADY_ON
                 val target = clickableAncestor(node)

@@ -167,8 +167,14 @@ object AudioState {
 
     /** Đang trong một cuộc gọi bất kỳ (sim, Zalo, WhatsApp...). */
     fun inAnyCall(context: Context): Boolean {
-        val am = context.getSystemService(AudioManager::class.java) ?: return false
-        return am.mode == AudioManager.MODE_IN_CALL || am.mode == AudioManager.MODE_IN_COMMUNICATION
+        // Không dựa vào MODE_IN_COMMUNICATION: Zalo/WhatsApp có thể để chế độ này cả khi chỉ phát
+        // tin nhắn thoại hay video, làm app tưởng đang gọi và không đọc tin nhắn nữa.
+        val telecom = runCatching {
+            context.getSystemService(android.telecom.TelecomManager::class.java)?.isInCall == true
+        }.getOrDefault(false)
+        val am = context.getSystemService(AudioManager::class.java)
+        return telecom || am?.mode == AudioManager.MODE_IN_CALL ||
+            vn.blindsupport.app.notify.BlindNotificationListener.voipCallInProgress
     }
 
     fun isRingerNormal(context: Context): Boolean {

@@ -50,7 +50,7 @@ object Prefs {
 
     // Giờ yên tĩnh: không đọc tin nhắn, vẫn báo cuộc gọi
     var quietHours: Boolean
-        get() = bool("quiet_hours", true)
+        get() = bool("quiet_hours", false)
         set(v) = setBool("quiet_hours", v)
     var quietStart: Int
         get() = sp.getInt("quiet_start", 22)
