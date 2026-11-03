@@ -64,6 +64,11 @@
                 <action android:name="android.intent.action.VOICE_COMMAND" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!-- Cho phép chọn app làm "Trợ lý kỹ thuật số": nhấn giữ nút nguồn để mở lệnh giọng nói. -->
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <!-- Màn hình cài đặt dành cho người hỗ trợ (có biểu tượng riêng). -->

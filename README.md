@@ -47,7 +47,9 @@ Các bản cập nhật đều được ký cùng một khóa (`keystore/release
    - Hiển thị trên ứng dụng khác, không giới hạn pin, hiện toàn màn hình khi khóa máy
    - Tắt **"Tạm dừng hoạt động nếu không dùng"** (để Android không tự thu hồi quyền)
    - **Giọng đọc tiếng Việt**: nếu ❌, cài/tải dữ liệu giọng tiếng Việt cho "Dịch vụ giọng nói của Google" (Speech Services by Google) để dùng offline.
-4. Cài **bấm đúp nút nguồn**: Cài đặt → Tính năng nâng cao → Phím sườn → Nhấn hai lần → Mở ứng dụng → **Trợ Lý Nghe Gọi**.
+4. Cài **nút nguồn** để mở lệnh giọng nói (chọn một trong hai):
+   - **Nhấn giữ nút nguồn** (khuyên dùng): Cài đặt → Tính năng nâng cao → Phím sườn → Nhấn và giữ → **Trợ lý kỹ thuật số** → chọn **Trợ Lý Nghe Gọi** (nằm trong mục "Ứng dụng khác"). Nếu máy hỏi, chọn đặt làm ứng dụng trợ lý mặc định.
+   - **Nhấn đúp nút nguồn**: Cài đặt → Tính năng nâng cao → Phím sườn → Nhấn hai lần → Mở ứng dụng → **Trợ Lý Nghe Gọi**.
 5. Pin: Cài đặt → Pin → Giới hạn sử dụng nền → **Ứng dụng không bao giờ ngủ** → thêm Trợ Lý Nghe Gọi, **Zalo**, **WhatsApp**. Đặt Pin của 3 app này là **"Không hạn chế"**.
 6. Trong "Cài đặt Trợ Lý": chọn **độ to giọng đọc** (mặc định mức 3 – rất to), rồi bấm **"Thử giọng đọc"**, **"Giả lập cuộc gọi đến"** và **"Thử nhận lệnh giọng nói"**. Nên kéo cả thanh **Nhạc chuông** lên tối đa trong Cài đặt → Âm thanh.
 7. Nhập danh bạ với tên dễ đọc (ví dụ "Mẹ", "Anh Hưng") – tên tiếng Việt thường được nhận dạng tốt hơn tên tiếng Anh hay biệt danh có ký hiệu.
