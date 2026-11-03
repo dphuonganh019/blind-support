@@ -7,22 +7,21 @@ import android.media.ToneGenerator
 import android.util.Log
 import kotlinx.coroutines.delay
 
-/** Tiếng "bíp" báo hiệu "bắt đầu nói đi". */
+/** Tiếng "bíp" báo hiệu "bắt đầu nói đi": to, trầm và dài để người già kịp nhận ra. */
 object Beeper {
-    suspend fun beep(times: Int = 1) {
-        val tg = try {
-            ToneGenerator(AudioManager.STREAM_ALARM, ToneGenerator.MAX_VOLUME)
-        } catch (e: Exception) {
-            return
-        }
-        try {
-            repeat(times) {
-                tg.startTone(ToneGenerator.TONE_PROP_BEEP, 180)
-                delay(260)
+    suspend fun beep() {
+        if (!Speaker.longBeep(Prefs.beepMs)) {
+            // Dự phòng nếu phát không được: tiếng bíp hệ thống.
+            val tg = runCatching { ToneGenerator(AudioManager.STREAM_ALARM, ToneGenerator.MAX_VOLUME) }.getOrNull() ?: return
+            try {
+                tg.startTone(ToneGenerator.TONE_PROP_BEEP, Prefs.beepMs)
+                delay(Prefs.beepMs + 100L)
+            } finally {
+                tg.release()
             }
-        } finally {
-            tg.release()
         }
+        // Chờ tiếng vang tắt hẳn rồi mới bật micro.
+        delay(200)
     }
 }
 

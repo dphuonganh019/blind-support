@@ -60,6 +60,33 @@ object BigUi {
         (button.background as? GradientDrawable)?.setColor(color)
     }
 
+    /**
+     * Android 15 vẽ app tràn cả dưới thanh trạng thái và thanh điều hướng. Thêm khoảng đệm đúng
+     * bằng các thanh đó để nút bấm không bị thanh điều hướng che.
+     */
+    fun fitSystemBars(view: android.view.View, lightBars: Boolean = false, activity: Activity? = null) {
+        val l = view.paddingLeft
+        val t = view.paddingTop
+        val r = view.paddingRight
+        val b = view.paddingBottom
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+            val bars = insets.getInsets(
+                androidx.core.view.WindowInsetsCompat.Type.systemBars() or
+                    androidx.core.view.WindowInsetsCompat.Type.displayCutout() or
+                    androidx.core.view.WindowInsetsCompat.Type.ime()
+            )
+            v.setPadding(l + bars.left, t + bars.top, r + bars.right, b + bars.bottom)
+            androidx.core.view.WindowInsetsCompat.CONSUMED
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(view)
+        if (activity != null) {
+            androidx.core.view.WindowCompat.getInsetsController(activity.window, view).apply {
+                isAppearanceLightStatusBars = lightBars
+                isAppearanceLightNavigationBars = lightBars
+            }
+        }
+    }
+
     /** Cho màn hình hiện trên màn khóa và tự bật sáng. */
     fun showOverLockScreen(activity: Activity) {
         if (Build.VERSION.SDK_INT >= 27) {

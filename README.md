@@ -15,7 +15,10 @@ App Android giúp người khiếm thị nghe gọi điện thoại và nghe tin
 
 ### Lệnh giọng nói (sau khi bấm đúp nút nguồn và nghe tiếng bíp)
 
+Mọi câu hỏi của app đều kết thúc bằng *"… sau tiếng bíp"*, rồi kêu một tiếng bíp to, dài khoảng 2 giây. Nói sau khi tiếng bíp tắt.
+
 - **"Gọi Mẹ"**, **"Gọi cho anh Hưng"** – gọi theo tên trong danh bạ (app hỏi lại để xác nhận)
+- **"Gọi số"** rồi đọc từng chữ số (ví dụ "không chín một hai…"), đọc xong im lặng chờ – app đọc lại số để xác nhận rồi mới gọi. Có thể nói liền "gọi số không chín một hai…".
 - **"Gọi lại"** – gọi lại người vừa gọi đến / gọi nhỡ
 - **"Đọc tin nhắn"** – đọc các tin chưa nghe
 - **"Cuộc gọi nhỡ"** – đọc danh sách cuộc gọi nhỡ trong 24 giờ

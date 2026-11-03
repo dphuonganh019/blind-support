@@ -97,6 +97,7 @@ class PhoneActivity : ComponentActivity() {
         }
         root.addView(bar)
         setContentView(root)
+        BigUi.fitSystemBars(root, activity = this)
 
         tone = runCatching { ToneGenerator(AudioManager.STREAM_DTMF, 70) }.getOrNull()
         handleIntent(intent)
@@ -182,8 +183,14 @@ class PhoneActivity : ComponentActivity() {
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, dp(12))
         }
-        col.addView(numberView)
-        col.addView(matchView)
+        // Phần hiển thị số chiếm chỗ trống phía trên, bàn phím gọn ở phía dưới (cỡ bình thường).
+        val display = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            addView(numberView)
+            addView(matchView)
+        }
+        col.addView(display, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         val keys = listOf(
             listOf("1" to "", "2" to "ABC", "3" to "DEF"),
@@ -195,20 +202,28 @@ class PhoneActivity : ComponentActivity() {
             val r = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
             for ((digit, letters) in row) {
                 val b = Button(this).apply {
-                    text = if (letters.isEmpty()) digit else "$digit\n$letters"
+                    text = if (letters.isEmpty()) digit else android.text.SpannableString("$digit\n$letters").apply {
+                        setSpan(
+                            android.text.style.RelativeSizeSpan(0.45f), digit.length + 1, length,
+                            android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                    }
                     isAllCaps = false
                     setTextColor(Color.WHITE)
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
-                    background = rounded(KEY, 40)
+                    setPadding(0, 0, 0, 0)
+                    minHeight = 0
+                    minimumHeight = 0
+                    background = rounded(KEY, 30)
                     setOnClickListener { press(digit) }
                     if (digit == "0") setOnLongClickListener { press("+"); true }
                 }
                 r.addView(b, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
-                    val m = dp(5)
+                    val m = dp(4)
                     setMargins(m, m, m, m)
                 })
             }
-            col.addView(r, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+            col.addView(r, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(68)))
         }
 
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
@@ -249,7 +264,11 @@ class PhoneActivity : ComponentActivity() {
                 setMargins(m, m, m, m)
             })
         }
-        col.addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.1f))
+        for (v in listOf(add, call, del)) {
+            v.minHeight = 0
+            v.minimumHeight = 0
+        }
+        col.addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(72)))
         renderNumber()
         return col
     }

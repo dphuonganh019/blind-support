@@ -81,6 +81,11 @@ object Prefs {
         get() = sp.getInt("boost_level", 3)
         set(v) = sp.edit().putInt("boost_level", v.coerceIn(1, 4)).apply()
 
+    /** Độ dài tiếng bíp trước khi nghe lệnh (mili giây). */
+    var beepMs: Int
+        get() = sp.getInt("beep_ms", 1800)
+        set(v) = sp.edit().putInt("beep_ms", v.coerceIn(300, 3000)).apply()
+
     /** Đưa âm lượng cuộc gọi (giọng người bên kia) lên tối đa mỗi khi nghe máy. */
     var maxCallVolume: Boolean
         get() = sp.getBoolean("max_call_volume", true)

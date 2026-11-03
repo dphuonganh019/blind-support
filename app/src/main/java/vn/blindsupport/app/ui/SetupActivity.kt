@@ -65,6 +65,7 @@ class SetupActivity : ComponentActivity() {
         }
         scroll.addView(col)
         setContentView(scroll)
+        BigUi.fitSystemBars(scroll, lightBars = true, activity = this)
 
         col.addView(heading("Cài đặt Trợ Lý Nghe Gọi"))
         col.addView(note("Phiên bản ${versionName()}. Màn hình này dành cho người hỗ trợ. Hãy làm cho tới khi tất cả các mục đều có dấu ✅."))

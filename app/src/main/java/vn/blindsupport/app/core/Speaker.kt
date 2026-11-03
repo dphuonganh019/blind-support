@@ -214,6 +214,31 @@ object Speaker {
         return true
     }
 
+    /**
+     * Phát tiếng bíp dài [durationMs] ở mức to nhất có thể: tần số trầm (người già nghe tần số
+     * thấp tốt hơn), làm "vuông" sóng để giàu âm bội nên nghe to hơn sóng sin thường.
+     */
+    suspend fun longBeep(durationMs: Int): Boolean = mutex.withLock {
+        if (!::appContext.isInitialized) return@withLock false
+        AppVolume.applyVoiceVolume(appContext)
+        val sr = 22050
+        val n = sr * durationMs / 1000
+        val fade = sr / 50 // 20 ms
+        val drive = 2.5
+        val norm = kotlin.math.tanh(drive)
+        val samples = ShortArray(n) { i ->
+            val t = i.toDouble() / sr
+            val s = kotlin.math.tanh(drive * kotlin.math.sin(2 * Math.PI * 740.0 * t)) / norm
+            val env = when {
+                i < fade -> i.toDouble() / fade
+                i > n - fade -> (n - i).toDouble() / fade
+                else -> 1.0
+            }
+            (s * env * 0.97 * 32767).toInt().toShort()
+        }
+        runCatching { play(Pcm(samples, sr, 1)) }.getOrDefault(false)
+    }
+
     /** Dừng câu đang đọc (ví dụ khi có cuộc gọi đến cắt ngang việc đọc tin nhắn). */
     fun stop() {
         runCatching { tts?.stop() }

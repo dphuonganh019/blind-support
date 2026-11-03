@@ -43,6 +43,7 @@ class VoipCallActivity : ComponentActivity() {
         root.addView(answerButton)
         root.addView(declineButton)
         setContentView(root)
+        BigUi.fitSystemBars(root, activity = this)
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {

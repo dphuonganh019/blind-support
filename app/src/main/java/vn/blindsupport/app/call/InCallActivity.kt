@@ -51,6 +51,7 @@ class InCallActivity : ComponentActivity() {
         root.addView(keypadButton)
         root.addView(bottomButton)
         setContentView(root)
+        BigUi.fitSystemBars(root, activity = this)
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {

@@ -58,6 +58,7 @@ class VoiceCommandActivity : ComponentActivity() {
         root.addView(again)
         root.addView(close)
         setContentView(root)
+        BigUi.fitSystemBars(root, activity = this)
     }
 
     override fun onResume() {
@@ -114,15 +115,14 @@ class VoiceCommandActivity : ComponentActivity() {
 
         val contacts = withContext(Dispatchers.IO) { ContactsRepo.allContacts(this@VoiceCommandActivity) }
         val phrases = CommandParser.phrases(contacts)
-        val unread = MessageStore.unreadCount()
-        val greeting = if (unread > 0) "Bạn có $unread tin nhắn mới. Mời nói lệnh." else "Mời nói lệnh."
+        val greeting = "Mời nói lệnh sau tiếng bíp."
 
         var command: Command? = null
         for (attempt in 0 until 2) {
             status("Đang nghe...")
-            Speaker.speak(if (attempt == 0) greeting else "Tôi chưa nghe rõ. Mời nói lại.")
+            Speaker.speak(if (attempt == 0) greeting else "Tôi chưa nghe rõ. Mời nói lại sau tiếng bíp.")
             Beeper.beep()
-            val heard = VoiceRecognizer.listen(this, phrases, 6_000) { CommandParser.parse(it, contacts) != null }
+            val heard = VoiceRecognizer.listen(this, phrases, 8_000) { CommandParser.parse(it, contacts) != null }
             if (heard == null && VoiceRecognizer.lastError != null && !VoiceRecognizer.isModelLoaded) {
                 Speaker.speak("Bộ nhận dạng giọng nói chưa sẵn sàng. Hãy thử lại sau ít phút.")
                 finish()
@@ -143,6 +143,7 @@ class VoiceCommandActivity : ComponentActivity() {
     private suspend fun execute(command: Command, contacts: List<Contact>) {
         when (command) {
             is Command.CallContact -> confirmAndCall(command.contact.name, command.contact.number)
+            is Command.CallNumber -> callByNumber(command.digits)
             Command.CallBack -> {
                 val last = withContext(Dispatchers.IO) { ContactsRepo.lastIncomingNumber(this@VoiceCommandActivity) }
                 val number = last?.second ?: Prefs.lastMissedNumber
@@ -229,9 +230,12 @@ class VoiceCommandActivity : ComponentActivity() {
         val spokenName = TextUtils.cleanForSpeech(name).ifBlank { "số " + TextUtils.speakableNumber(number) }
         status("Gọi $name?")
         for (attempt in 0 until 2) {
-            Speaker.speak(if (attempt == 0) "Gọi cho $spokenName, phải không?" else "Nói: đúng, hoặc: không.")
+            Speaker.speak(
+                if (attempt == 0) "Gọi cho $spokenName, phải không? Hãy nói: đúng, hoặc: không, sau tiếng bíp."
+                else "Hãy nói: đúng, hoặc: không, sau tiếng bíp."
+            )
             Beeper.beep()
-            val ans = VoiceRecognizer.listen(this, CommandParser.CONFIRM_YES + CommandParser.CONFIRM_NO, 5_000) {
+            val ans = VoiceRecognizer.listen(this, CommandParser.CONFIRM_YES + CommandParser.CONFIRM_NO, 7_000) {
                 CommandParser.isYes(it) || CommandParser.isNo(it)
             } ?: continue
             if (CommandParser.isYes(ans)) {
@@ -241,6 +245,48 @@ class VoiceCommandActivity : ComponentActivity() {
             if (CommandParser.isNo(ans)) {
                 Speaker.speak("Đã hủy.")
                 return
+            }
+        }
+        Speaker.speak("Đã hủy cuộc gọi.")
+    }
+
+    /** Gọi theo số đọc bằng giọng nói. [initial]: phần số đã đọc kèm trong câu "gọi số ...". */
+    private suspend fun callByNumber(initial: String) {
+        var digits = initial
+        for (attempt in 0 until 2) {
+            if (digits.length < 9) {
+                if (digits.isEmpty() || attempt > 0) {
+                    status("Hãy đọc số điện thoại")
+                    Speaker.speak(
+                        if (attempt == 0) "Hãy đọc từng số của số điện thoại sau tiếng bíp. Đọc xong thì im lặng chờ."
+                        else "Hãy đọc lại số điện thoại sau tiếng bíp."
+                    )
+                    Beeper.beep()
+                    digits = VoiceRecognizer.listenDigits(this)
+                } else {
+                    // Đã đọc một phần ngay trong câu lệnh: nghe tiếp phần còn lại, không cần hỏi.
+                    digits = VoiceRecognizer.listenDigits(this, initial = digits, silenceMs = 2_500)
+                }
+            }
+            status(digits)
+            if (digits.length < 3) {
+                Speaker.speak("Tôi chưa nghe được số nào.")
+                digits = ""
+                continue
+            }
+            val spoken = TextUtils.speakableNumber(digits)
+            Speaker.speak("Số bạn đọc là: $spoken. Gọi số này, phải không? Hãy nói: đúng, hoặc: không, sau tiếng bíp.")
+            Beeper.beep()
+            val ans = VoiceRecognizer.listen(this, CommandParser.CONFIRM_YES + CommandParser.CONFIRM_NO, 7_000) {
+                CommandParser.isYes(it) || CommandParser.isNo(it)
+            }
+            when {
+                ans != null && CommandParser.isYes(ans) -> {
+                    placeCall(digits, "số $spoken")
+                    return
+                }
+                attempt == 0 -> digits = "" // nói "không" hoặc im lặng: cho đọc lại một lần
+                else -> Unit
             }
         }
         Speaker.speak("Đã hủy cuộc gọi.")

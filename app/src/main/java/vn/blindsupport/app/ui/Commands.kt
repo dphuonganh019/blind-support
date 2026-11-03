@@ -10,6 +10,8 @@ object VoiceSession {
 
 sealed class Command {
     data class CallContact(val contact: Contact) : Command()
+    /** "Gọi số ..." – [digits] là phần số đã đọc kèm trong câu lệnh (có thể rỗng). */
+    data class CallNumber(val digits: String) : Command()
     object CallBack : Command()
     object ReadMessages : Command()
     object MissedCalls : Command()
@@ -29,13 +31,13 @@ object CommandParser {
         Command.CallBack to listOf("gọi lại", "gọi lại số vừa gọi"),
         Command.ReadMessages to listOf("đọc tin nhắn", "tin nhắn", "đọc tin", "nghe tin nhắn", "có tin nhắn không"),
         Command.MissedCalls to listOf("cuộc gọi nhỡ", "gọi nhỡ", "ai gọi", "ai vừa gọi"),
-        Command.Time to listOf("mấy giờ", "giờ", "bây giờ là mấy giờ", "mấy giờ rồi", "hôm nay ngày bao nhiêu", "ngày", "hôm nay thứ mấy", "thứ mấy"),
-        Command.Battery to listOf("pin", "còn bao nhiêu pin", "kiểm tra pin", "pin còn bao nhiêu"),
+        Command.Time to listOf("mấy giờ", "bây giờ là mấy giờ", "mấy giờ rồi", "hôm nay ngày bao nhiêu", "hôm nay thứ mấy", "thứ mấy"),
+        Command.Battery to listOf("pin", "còn bao nhiêu pin", "kiểm tra pin", "pin còn bao nhiêu", "báo pin"),
         Command.VolumeUp to listOf("to lên", "to hơn", "nói to", "nói to lên", "tăng âm lượng"),
         Command.VolumeDown to listOf("nhỏ xuống", "nhỏ hơn", "nói nhỏ", "nói nhỏ lại", "giảm âm lượng"),
         Command.SpeakSlower to listOf("nói chậm", "nói chậm lại", "chậm lại", "chậm hơn"),
         Command.SpeakFaster to listOf("nói nhanh", "nói nhanh lên", "nhanh lên", "nhanh hơn"),
-        Command.Help to listOf("hướng dẫn", "giúp", "trợ giúp", "giúp tôi", "lệnh"),
+        Command.Help to listOf("hướng dẫn", "trợ giúp", "giúp tôi"),
         Command.ReadContacts to listOf("danh bạ", "đọc danh bạ"),
         Command.Cancel to listOf("thôi", "hủy", "không", "không có gì", "tạm biệt"),
     )
@@ -45,6 +47,9 @@ object CommandParser {
 
     fun phrases(contacts: List<Contact>): List<String> {
         val list = FIXED.values.flatten().toMutableList()
+        // "gọi số" kèm chữ số: bộ nhận dạng cho phép nối các cụm, nên liệt kê từng chữ số riêng.
+        list += listOf("gọi số", "gọi đến số", "bấm số")
+        list += vn.blindsupport.app.core.DigitWords.WORDS
         for (c in contacts) {
             list += "gọi ${c.normalizedName}"
             list += "gọi cho ${c.normalizedName}"
@@ -57,6 +62,11 @@ object CommandParser {
         if (t.isEmpty()) return null
         // "gọi lại" phải kiểm tra trước "gọi <tên>".
         if (t == "gọi lại" || t.startsWith("gọi lại ")) return Command.CallBack
+        for (prefix in listOf("gọi đến số", "gọi số", "bấm số")) {
+            if (t == prefix || t.startsWith("$prefix ")) {
+                return Command.CallNumber(vn.blindsupport.app.core.DigitWords.toDigits(t.removePrefix(prefix)))
+            }
+        }
         if (t.startsWith("gọi ")) {
             val rest = t.removePrefix("gọi ").removePrefix("cho ").trim()
             matchContact(rest, contacts)?.let { return Command.CallContact(it) }
@@ -97,6 +107,7 @@ object CommandParser {
 
     const val HELP =
         "Các lệnh bạn có thể nói: Gọi, kèm tên trong danh bạ, ví dụ: gọi Mẹ. " +
+            "Gọi số, rồi đọc từng số điện thoại. " +
             "Gọi lại, để gọi lại người vừa gọi. Đọc tin nhắn. Cuộc gọi nhỡ. Mấy giờ. Pin. " +
             "Danh bạ, để nghe tên trong danh bạ. To lên, hoặc nhỏ xuống, để chỉnh âm lượng giọng đọc. " +
             "Nói chậm, hoặc nói nhanh. Khi có cuộc gọi đến, nói: nghe, hoặc: không. " +

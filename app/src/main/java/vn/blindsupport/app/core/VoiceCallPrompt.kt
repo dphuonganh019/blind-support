@@ -47,15 +47,16 @@ class VoiceCallPrompt(
                 RingVolumeGuard.lower(context)
                 val sentence = when {
                     !Prefs.voiceAnswer -> "Có $kind từ $callerLabel."
-                    round == 0 -> "Có $kind từ $callerLabel. Bạn có muốn nghe không? Hãy nói: nghe, hoặc: không."
-                    else -> "Vẫn đang có $kind từ $callerLabel. Nói: nghe, hoặc: không."
+                    round == 0 -> "Có $kind từ $callerLabel. Bạn có muốn nghe không? " +
+                        "Hãy nói: nghe, hoặc: không, sau tiếng bíp."
+                    else -> "Vẫn đang có $kind từ $callerLabel. Hãy nói: nghe, hoặc: không, sau tiếng bíp."
                 }
                 Speaker.speak(sentence)
                 if (!isRinging()) return
 
                 if (Prefs.voiceAnswer) {
                     Beeper.beep()
-                    val heard = VoiceRecognizer.listen(context, CallIntent.PHRASES, 5_000) {
+                    val heard = VoiceRecognizer.listen(context, CallIntent.PHRASES, 7_000) {
                         CallIntent.parse(it) != null
                     }
                     if (!isRinging()) return
