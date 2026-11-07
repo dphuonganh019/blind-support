@@ -31,7 +31,7 @@ import vn.blindsupport.app.notify.MessageAnnouncer
 import vn.blindsupport.app.voip.VoipCallController
 
 /**
- * Màn hình nghe lệnh. Mở bằng cách bấm đúp nút nguồn (cài trong Samsung) hoặc chạm biểu tượng app.
+ * Màn hình nghe lệnh. Mở bằng cách giữ phím giảm âm lượng (dịch vụ trợ năng), nút nguồn (Samsung) hoặc chạm biểu tượng app.
  * Mở lên là: đọc cảnh báo (nếu có) → "Mời nói" → bíp → nghe lệnh → làm → tự đóng.
  */
 class VoiceCommandActivity : ComponentActivity() {
@@ -69,6 +69,8 @@ class VoiceCommandActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        // Mở lại khi đang hiện (ví dụ giữ phím âm lượng lần nữa): bắt đầu phiên nghe mới.
+        startSession()
     }
 
     override fun onPause() {

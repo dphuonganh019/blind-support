@@ -156,7 +156,7 @@ class BlindInCallService : InCallService() {
                     Prefs.lastMissedNumber = call.number()
                     Prefs.lastMissedName = spoken
                     Speaker.speak(
-                        "Bạn vừa nhỡ cuộc gọi từ $spoken. Muốn gọi lại, hãy bấm đúp nút nguồn rồi nói: gọi lại."
+                        "Bạn vừa nhỡ cuộc gọi từ $spoken. Muốn gọi lại, hãy giữ phím giảm âm lượng rồi nói: gọi lại."
                     )
                 }
                 wasAnswered -> Speaker.speak("Đã kết thúc cuộc gọi.")

@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  - Sự kiện màn hình: chỉ nhận từ Zalo/WhatsApp (để bấm nút Loa / Trả lời).
+  - Phím bấm: nhận phím giảm âm lượng toàn máy để "giữ 2 giây = mở lệnh giọng nói".
+    Bấm nhanh vẫn giảm âm lượng như bình thường.
+-->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeWindowsChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows|flagIncludeNotImportantViews"
+    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows|flagIncludeNotImportantViews|flagRequestFilterKeyEvents"
+    android:canRequestFilterKeyEvents="true"
     android:canRetrieveWindowContent="true"
     android:description="@string/a11y_description"
     android:notificationTimeout="150"

@@ -134,15 +134,22 @@ class SetupActivity : ComponentActivity() {
         col.addView(toggle("Đọc nội dung tin (tắt: chỉ đọc tên người gửi)", Prefs.readContent) { Prefs.readContent = it })
         col.addView(toggle("Báo pin yếu / cắm sạc / rút sạc", Prefs.announceBattery) { Prefs.announceBattery = it })
         col.addView(toggle(
+            "Giữ phím GIẢM âm lượng khoảng 2 giây để mở lệnh giọng nói (cần bật Hỗ trợ tiếp cận)",
+            Prefs.volumeKeyTrigger
+        ) { Prefs.volumeKeyTrigger = it })
+        col.addView(toggle(
             "Giờ yên tĩnh ${Prefs.quietStart}h – ${Prefs.quietEnd}h: không đọc tin nhắn (vẫn báo cuộc gọi)",
             Prefs.quietHours
         ) { Prefs.quietHours = it })
 
-        col.addView(heading("4. Cài đặt trên máy Samsung (làm một lần)"))
-        col.addView(note(SAMSUNG_GUIDE))
-        col.addView(button("Mở cài đặt nút sườn (bấm đúp nút nguồn)") {
-            open(Intent(Settings.ACTION_SETTINGS))
+        col.addView(heading("4. Cách mở lệnh giọng nói"))
+        col.addView(note(TRIGGER_GUIDE))
+        col.addView(heading("5. Cài đặt riêng theo hãng máy (làm một lần)"))
+        col.addView(note(if (Build.MANUFACTURER.lowercase().let { it.contains("oppo") || it.contains("realme") || it.contains("oneplus") }) OPPO_GUIDE else SAMSUNG_GUIDE))
+        col.addView(button("Mở Thông tin ứng dụng (pin, tự khởi chạy...)") {
+            open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
         })
+        col.addView(button("Mở Cài đặt máy") { open(Intent(Settings.ACTION_SETTINGS)) })
     }
 
     override fun onResume() {
@@ -297,8 +304,24 @@ class SetupActivity : ComponentActivity() {
     }.getOrNull() ?: "?"
 
     companion object {
+        private val TRIGGER_GUIDE = """
+            • Mọi máy: GIỮ phím GIẢM âm lượng khoảng 2 giây (máy rung nhẹ) → nghe "Mời nói lệnh sau tiếng bíp". Bấm nhanh vẫn giảm âm lượng bình thường. Cần bật Hỗ trợ tiếp cận cho Trợ Lý ở mục 1.
+            • Màn hình đang tắt: bấm nút nguồn một lần cho sáng màn hình rồi mới giữ phím giảm âm lượng.
+            • Samsung có thêm cách: Cài đặt → Tính năng nâng cao → Phím sườn → Nhấn và giữ → Trợ lý kỹ thuật số → Trợ Lý Nghe Gọi.
+        """.trimIndent()
+
+        private val OPPO_GUIDE = """
+            Máy Oppo (ColorOS) tắt app chạy nền rất mạnh. Làm đủ các bước cho CẢ Trợ Lý Nghe Gọi, Zalo và WhatsApp:
+            • Cài đặt → Quản lý ứng dụng → chọn app → bật "Cho phép tự khởi chạy" và "Cho phép ứng dụng khác khởi chạy".
+            • Cùng màn hình đó → Mức sử dụng pin → bật "Cho phép hoạt động nền" (tắt tối ưu hóa pin).
+            • Cùng màn hình đó → Quyền ứng dụng / Quyền khác → bật "Hiển thị trên màn hình khóa", "Cửa sổ bật lên" (mở giao diện khi chạy nền), "Hiển thị trên các ứng dụng khác".
+            • Mở danh sách app gần đây → bấm ⋮ trên thẻ Trợ Lý (hoặc kéo thẻ xuống) → "Khóa", để không bị dọn khi bấm "Xóa tất cả".
+            • Cài đặt → Pin → tắt "Chế độ tiết kiệm pin" và "Tối ưu hóa sạc thông minh/ban đêm" nếu có.
+            • Nút nguồn trên Oppo chỉ mở được Camera / Trợ lý Google, nên dùng cách GIỮ phím giảm âm lượng.
+            • Không cần mở app thường xuyên. Không bấm "Buộc dừng" app này.
+        """.trimIndent()
+
         private val SAMSUNG_GUIDE = """
-            • Bấm đúp nút nguồn để ra lệnh: Cài đặt → Tính năng nâng cao → Phím sườn → Nhấn hai lần → Mở ứng dụng → chọn "Trợ Lý Nghe Gọi".
             • Pin: Cài đặt → Ứng dụng → Trợ Lý Nghe Gọi → Pin → chọn "Không hạn chế".
             • Không cho ngủ: Cài đặt → Pin → Giới hạn sử dụng nền → Ứng dụng không bao giờ ngủ → thêm Trợ Lý Nghe Gọi, Zalo và WhatsApp.
             • Zalo và WhatsApp cũng đặt Pin = "Không hạn chế" để cuộc gọi đến không bị trễ.

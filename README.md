@@ -10,10 +10,10 @@ App Android giúp người khiếm thị nghe gọi điện thoại và nghe tin
 | Có cuộc gọi Zalo / WhatsApp | Như trên, dùng nút Trả lời/Từ chối trong thông báo của Zalo/WhatsApp; sau khi nghe máy, app tự bấm nút **Loa** (cần bật Trợ năng). Nếu không bấm được loa, app nói *"hãy áp máy lên tai"*. |
 | Cuộc gọi nhỡ (sim, Zalo, WhatsApp) | Đọc to: *"Bạn vừa nhỡ cuộc gọi từ …"* |
 | Tin nhắn Zalo, WhatsApp, SMS | Đọc to người gửi và nội dung. Tin nhóm mặc định chỉ lưu lại, không đọc to. Đang gọi điện thì không đọc, lưu lại để nghe sau. Máy để im lặng **vẫn đọc**. Có thể bật **giờ yên tĩnh** (22h–6h, mặc định tắt) để không đọc tin ban đêm. |
-| Bấm đúp nút nguồn | Mở chế độ nghe lệnh (xem bảng lệnh bên dưới). |
+| **Giữ phím giảm âm lượng ~2 giây** (mọi hãng máy) hoặc nút nguồn (Samsung) | Máy rung nhẹ rồi mở chế độ nghe lệnh (xem bảng lệnh bên dưới). Bấm nhanh phím giảm âm lượng vẫn giảm âm lượng bình thường. Màn hình đang tắt thì bấm nút nguồn cho sáng trước. |
 | Pin | Báo pin yếu (20%, 10%, 5%), cắm sạc, rút sạc, sạc đầy. |
 
-### Lệnh giọng nói (sau khi bấm đúp nút nguồn và nghe tiếng bíp)
+### Lệnh giọng nói (sau khi giữ phím giảm âm lượng và nghe tiếng bíp)
 
 Mọi câu hỏi của app đều kết thúc bằng *"… sau tiếng bíp"*, rồi kêu một tiếng bíp to, dài khoảng 2 giây. Nói sau khi tiếng bíp tắt.
 
@@ -67,6 +67,17 @@ Các bản cập nhật đều được ký cùng một khóa (`keystore/release
 - [ ] Bấm đúp nút nguồn → "gọi Mẹ" → "đúng" → gọi đi, loa ngoài bật
 - [ ] **Khởi động lại máy** rồi lặp lại 1–2 mục trên (app không cần mở lại)
 - [ ] Vuốt tắt hết app ở đa nhiệm rồi thử lại
+
+## Cài trên máy Oppo (ColorOS)
+
+ColorOS tắt app chạy nền rất mạnh. Làm cho **cả Trợ Lý Nghe Gọi, Zalo và WhatsApp**:
+
+1. Cài đặt → Quản lý ứng dụng → chọn app → bật **Cho phép tự khởi chạy** và **Cho phép ứng dụng khác khởi chạy**.
+2. Cùng màn hình → **Mức sử dụng pin** → bật **Cho phép hoạt động nền**, tắt tối ưu hóa pin.
+3. Cùng màn hình → Quyền → bật **Hiển thị trên màn hình khóa**, **Cửa sổ bật lên / mở giao diện khi chạy nền**, **Hiển thị trên ứng dụng khác**.
+4. Mở danh sách app gần đây → **khóa** thẻ Trợ Lý Nghe Gọi.
+5. Nút nguồn của Oppo chỉ mở được Camera / Trợ lý Google, nên dùng **giữ phím giảm âm lượng** để mở lệnh giọng nói.
+6. Giọng đọc tiếng Việt: cần wifi một lần để tải giọng Google tiếng Việt (mục "Giọng đọc tiếng Việt" trong Cài đặt Trợ Lý).
 
 ## Người khác dùng máy để gọi (khách đến thăm, người hỗ trợ)
 

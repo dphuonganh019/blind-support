@@ -74,7 +74,7 @@ object MessageAnnouncer {
         if (held <= 0) return
         val unread = MessageStore.unreadCount()
         if (unread > 0) {
-            enqueueText("Trong lúc gọi, bạn có $unread tin nhắn mới. Bấm đúp nút nguồn rồi nói: đọc tin nhắn.")
+            enqueueText("Trong lúc gọi, bạn có $unread tin nhắn mới. Giữ phím giảm âm lượng rồi nói: đọc tin nhắn.")
         }
     }
 

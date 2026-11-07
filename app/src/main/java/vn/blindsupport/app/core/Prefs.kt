@@ -81,6 +81,16 @@ object Prefs {
         get() = sp.getInt("boost_level", 3)
         set(v) = sp.edit().putInt("boost_level", v.coerceIn(1, 4)).apply()
 
+    /** Giữ phím giảm âm lượng để mở lệnh giọng nói. */
+    var volumeKeyTrigger: Boolean
+        get() = sp.getBoolean("volume_key_trigger", true)
+        set(v) = sp.edit().putBoolean("volume_key_trigger", v).apply()
+
+    /** Thời gian phải giữ phím (mili giây). */
+    var volumeHoldMs: Int
+        get() = sp.getInt("volume_hold_ms", 1500)
+        set(v) = sp.edit().putInt("volume_hold_ms", v.coerceIn(800, 4000)).apply()
+
     /** Độ dài tiếng bíp trước khi nghe lệnh (mili giây). */
     var beepMs: Int
         get() = sp.getInt("beep_ms", 1800)

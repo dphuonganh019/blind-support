@@ -1,10 +1,23 @@
 package vn.blindsupport.app.a11y
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Intent
+import android.media.AudioManager
+import android.os.Handler
+import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import vn.blindsupport.app.call.CallManager
+import vn.blindsupport.app.core.AudioState
+import vn.blindsupport.app.core.Prefs
 import vn.blindsupport.app.core.TextUtils
+import vn.blindsupport.app.ui.VoiceCommandActivity
+import vn.blindsupport.app.voip.VoipCallController
 
 /**
  * Dịch vụ trợ năng: chỉ hoạt động trong Zalo/WhatsApp và chỉ khi app vừa "hẹn" bấm một nút
@@ -30,6 +43,82 @@ class BlindAccessibilityService : AccessibilityService() {
     }
 
     override fun onInterrupt() {}
+
+    // ---------------- Giữ phím giảm âm lượng = mở lệnh giọng nói ----------------
+
+    private val handler = Handler(Looper.getMainLooper())
+    /** Đang theo dõi một lần nhấn giữ phím giảm âm lượng. */
+    private var tracking = false
+    private var triggered = false
+    private val holdRunnable = Runnable {
+        if (tracking) {
+            triggered = true
+            openVoiceCommand()
+        }
+    }
+
+    /**
+     * Hệ thống gửi MỌI phím bấm qua đây trước. Trả về true = app giữ lại phím đó.
+     * Chỉ can thiệp phím giảm âm lượng, và chỉ khi không có cuộc gọi nào.
+     */
+    override fun onKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode != KeyEvent.KEYCODE_VOLUME_DOWN) return false
+        // Phím nhả mà app không giữ lúc nhấn: để hệ thống xử lý như thường.
+        if (event.action == KeyEvent.ACTION_UP && !tracking) return false
+        if (!tracking && !shouldIntercept()) return false
+        when (event.action) {
+            KeyEvent.ACTION_DOWN -> {
+                if (event.repeatCount == 0 && !tracking) {
+                    tracking = true
+                    triggered = false
+                    handler.postDelayed(holdRunnable, Prefs.volumeHoldMs.toLong())
+                }
+                return true
+            }
+            KeyEvent.ACTION_UP -> {
+                handler.removeCallbacks(holdRunnable)
+                val wasTriggered = triggered
+                tracking = false
+                triggered = false
+                if (!wasTriggered) {
+                    // Bấm nhanh: giảm âm lượng như bình thường (vì app đã giữ lại phím này).
+                    runCatching {
+                        getSystemService(AudioManager::class.java)?.adjustSuggestedStreamVolume(
+                            AudioManager.ADJUST_LOWER, AudioManager.USE_DEFAULT_STREAM_TYPE, AudioManager.FLAG_SHOW_UI
+                        )
+                    }
+                }
+                return true
+            }
+        }
+        return true
+    }
+
+    private fun shouldIntercept(): Boolean {
+        if (!Prefs.volumeKeyTrigger) return false
+        // Đang có cuộc gọi: để phím âm lượng cho màn hình cuộc gọi (tăng = nghe, giảm = tắt chuông)
+        // và cho việc chỉnh âm lượng cuộc gọi.
+        if (CallManager.calls().isNotEmpty() || VoipCallController.isRinging() || AudioState.inAnyCall(this)) {
+            return false
+        }
+        // Màn hình tắt: không can thiệp.
+        val pm = getSystemService(PowerManager::class.java)
+        if (pm != null && !pm.isInteractive) return false
+        return true
+    }
+
+    private fun openVoiceCommand() {
+        vibrate()
+        val i = Intent(this, VoiceCommandActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        runCatching { startActivity(i) }
+    }
+
+    private fun vibrate() {
+        runCatching {
+            getSystemService(Vibrator::class.java)?.vibrate(VibrationEffect.createOneShot(250, 255))
+        }
+    }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val task = UiClicker.pending ?: return
