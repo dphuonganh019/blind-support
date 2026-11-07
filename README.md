@@ -13,10 +13,10 @@ App Android giúp người khiếm thị **nghe gọi điện thoại, gọi đi
 
 1. App kéo **âm lượng chuông máy lên 100%** (gọi xong trả lại mức cũ), chuông máy reo **6 giây** trước (chỉnh được 0 / 3 / 6 / 10 giây), máy **rung liên tục** suốt lúc có cuộc gọi. Máy đang để chế độ im lặng/rung thì Android không cho app bật chuông – 6 giây đầu sẽ im, nhưng sau đó app vẫn đọc tên và phát chuông riêng như bình thường.
 2. App tắt chuông thật (để tiếng chuông không lọt vào micro) và nói ngắn gọn:
-   *"Có điện thoại! **Hưng Thỏ** gọi. Nói: nghe, hoặc bấm phím cạnh máy."*
+   *"Có điện thoại! **Hưng Thỏ** gọi. Sau tiếng bíp, nói: nghe. Hoặc bấm phím cạnh máy để nghe."*
    Số chưa lưu danh bạ thì đọc từng chữ số; số ẩn thì nói "số ẩn".
 3. Tiếng bíp ngắn → app nghe ngay sau tiếng bíp, khoảng **9 giây**.
-4. Nếu chưa trả lời: app phát **tiếng chuông của riêng app** khoảng 1,5 giây (vẫn kêu khi máy để im lặng), rồi hỏi ngắn: *"Bạn có muốn nghe máy không? Nói: nghe, để nghe."* (nghe 7 giây) – lặp lại cho tới khi người gọi cúp máy.
+4. Nếu chưa trả lời: app phát **tiếng chuông của riêng app** khoảng 1,5 giây (vẫn kêu khi máy để im lặng), rồi hỏi ngắn: *"Bạn có muốn nghe máy không? Sau tiếng bíp, nói: nghe."* (nghe 7 giây) – lặp lại cho tới khi người gọi cúp máy.
 
 > Nhà mạng thường chỉ cho đổ chuông khoảng 30–40 giây rồi tự cắt (bên gọi có thể nghe "đường dây bận"). Với cài đặt mặc định, lần nghe thứ nhất xong ở khoảng giây 22, lần thứ hai ở khoảng giây 33. Nếu người dùng hay trả lời chậm, giảm "Đổ chuông trước khi đọc tên" xuống 3 giây.
 
@@ -35,7 +35,7 @@ Nghe máy xong app tự **bật loa ngoài** và đưa **âm lượng cuộc g�
 
 ### Cuộc gọi Zalo / WhatsApp
 
-1. Chuông Zalo/WhatsApp reo khoảng **3 giây** (Zalo đổ chuông ngắn hơn sim), rồi app nói: *"Có điện thoại Zalo! … gọi. Nói: nghe."* Các lần sau như cuộc gọi sim.
+1. Chuông Zalo/WhatsApp reo khoảng **3 giây** (Zalo đổ chuông ngắn hơn sim), rồi app nói: *"Có điện thoại Zalo! … gọi. Sau tiếng bíp, nói: nghe, để nghe."* Các lần sau như cuộc gọi sim.
 2. Vì chuông Zalo/WhatsApp vẫn kêu (app không tắt được), app chỉ nhận câu có chữ **"nghe"** (như trên), "bắt máy", "trả lời" để nghe máy (không nhận "có", "ừ", "vâng" – tiếng chuông hay bị nghe nhầm thành các từ này). Nói **"không"** để từ chối (có hỏi lại).
 3. **Phím cạnh máy không dùng được** để nghe cuộc gọi Zalo/WhatsApp (Android không chuyển phím cho app), nên app không nhắc cách này.
 4. Nghe máy xong, app tự bật **loa ngoài** bằng Trợ năng:

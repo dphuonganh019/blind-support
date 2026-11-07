@@ -150,9 +150,9 @@ class VoiceCallPrompt(
                 // Phím cạnh máy chỉ nghe được cuộc gọi sim (với Zalo/WhatsApp, Android không chuyển phím cho app).
                 val sentence = when {
                     !Prefs.voiceAnswer -> "$attention$callerLabel gọi."
-                    round == 0 && appName == null -> "$attention$callerLabel gọi. Nói: nghe, hoặc bấm phím cạnh máy."
-                    round == 0 -> "$attention$callerLabel gọi. Nói: nghe."
-                    else -> "Bạn có muốn nghe máy không? Nói: nghe, để nghe."
+                    round == 0 && appName == null -> "$attention$callerLabel gọi. Sau tiếng bíp, nói: nghe. Hoặc bấm phím cạnh máy để nghe."
+                    round == 0 -> "$attention$callerLabel gọi. Sau tiếng bíp, nói: nghe, để nghe."
+                    else -> "Bạn có muốn nghe máy không? Sau tiếng bíp, nói: nghe."
                 }
                 Speaker.speak(sentence)
                 if (!isRinging()) return
