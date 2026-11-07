@@ -117,6 +117,30 @@ object VoiceRecognizer {
         put("[unk]")
     }.toString()
 
+    /** Bộ nhận dạng đã tạo sẵn cho lần nghe kế tiếp (cùng danh sách cụm). */
+    private var prepared: Pair<List<String>, Recognizer>? = null
+    private val preparedLock = Any()
+
+    /** Tạo sẵn bộ nhận dạng (ví dụ trong lúc đang bíp) để lần nghe kế tiếp mở micro ngay. */
+    fun prepare(phrases: Collection<String>) {
+        val m = model ?: return
+        val list = phrases.toList()
+        val r = newRecognizer(m, list) ?: return
+        synchronized(preparedLock) {
+            prepared?.second?.let { old -> runCatching { old.close() } }
+            prepared = list to r
+        }
+    }
+
+    private fun takePrepared(phrases: Collection<String>): Recognizer? = synchronized(preparedLock) {
+        val p = prepared ?: return@synchronized null
+        prepared = null
+        if (p.first == phrases.toList()) p.second else {
+            runCatching { p.second.close() }
+            null
+        }
+    }
+
     private fun newRecognizer(m: Model, phrases: Collection<String>): Recognizer? {
         val r = try {
             Recognizer(m, SAMPLE_RATE, grammarJson(phrases))
@@ -144,7 +168,7 @@ object VoiceRecognizer {
         }
         lastRejected = null
         val m = ensureModel(context) ?: return@withLock null
-        val recognizer = newRecognizer(m, phrases) ?: return@withLock null
+        val recognizer = takePrepared(phrases) ?: newRecognizer(m, phrases) ?: return@withLock null
         val service = try {
             SpeechService(recognizer, SAMPLE_RATE)
         } catch (e: Exception) {

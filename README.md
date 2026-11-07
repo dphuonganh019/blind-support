@@ -11,11 +11,11 @@ App Android giúp người khiếm thị **nghe gọi điện thoại, gọi đi
 
 ### Cuộc gọi sim
 
-1. Chuông máy reo **6 giây** trước (chỉnh được 0 / 3 / 6 / 10 giây), máy **rung liên tục** suốt lúc có cuộc gọi.
+1. App kéo **âm lượng chuông máy lên 100%** (gọi xong trả lại mức cũ), chuông máy reo **6 giây** trước (chỉnh được 0 / 3 / 6 / 10 giây), máy **rung liên tục** suốt lúc có cuộc gọi. Máy đang để chế độ im lặng/rung thì Android không cho app bật chuông – 6 giây đầu sẽ im, nhưng sau đó app vẫn đọc tên và phát chuông riêng như bình thường.
 2. App tắt chuông thật (để tiếng chuông không lọt vào micro) và nói ngắn gọn:
    *"Có điện thoại! **Hưng Thỏ** gọi. Nói: nghe, hoặc bấm phím cạnh máy."*
    Số chưa lưu danh bạ thì đọc từng chữ số; số ẩn thì nói "số ẩn".
-3. Tiếng bíp ngắn → app nghe khoảng **9 giây**.
+3. Tiếng bíp ngắn → app nghe ngay sau tiếng bíp, khoảng **9 giây**.
 4. Nếu chưa trả lời: app phát **tiếng chuông của riêng app** khoảng 1,5 giây (vẫn kêu khi máy để im lặng), rồi hỏi ngắn: *"Bạn có muốn nghe máy không? Nói: nghe, để nghe."* (nghe 7 giây) – lặp lại cho tới khi người gọi cúp máy.
 
 > Nhà mạng thường chỉ cho đổ chuông khoảng 30–40 giây rồi tự cắt (bên gọi có thể nghe "đường dây bận"). Với cài đặt mặc định, lần nghe thứ nhất xong ở khoảng giây 22, lần thứ hai ở khoảng giây 33. Nếu người dùng hay trả lời chậm, giảm "Đổ chuông trước khi đọc tên" xuống 3 giây.
@@ -24,8 +24,8 @@ Cách trả lời:
 
 | Muốn | Cách làm |
 |---|---|
-| Nghe máy | Nói **"nghe"** (hoặc "nghe máy", "bắt máy", "trả lời", "có", "vâng", "ừ") – hoặc **bấm phím bất kỳ ở cạnh máy** (tăng/giảm âm lượng, nguồn) – hoặc chạm **nửa trên màn hình** (nút NGHE màu xanh) |
-| Từ chối | Nói **"không"** (hoặc "không nghe", "từ chối", "tắt máy", "cúp máy"), app hỏi lại *"Từ chối cuộc gọi, đúng không?"* – nói **"đúng"** (hoặc "không" lần nữa) mới từ chối – hoặc **giữ lâu** nửa dưới màn hình (nút TỪ CHỐI màu đỏ) |
+| Nghe máy | Nói **"nghe"** – chỉ cần app nghe ra chữ "nghe" ở bất kỳ đâu trong câu là nhấc máy, dù có thêm chữ khác ("nghe em", "ừ nghe đi", "sẽ nghe"…); ngoài ra "bắt máy", "trả lời", "có", "vâng", "ừ" – hoặc **bấm phím bất kỳ ở cạnh máy** (tăng/giảm âm lượng, nguồn) – hoặc chạm **nửa trên màn hình** (nút NGHE màu xanh) |
+| Từ chối | Nói **"không"** (hoặc "không nghe", "từ chối", "tắt máy", "cúp máy"; "không / chưa / đừng" đứng ngay trước "nghe" thì không tính là nghe máy), app hỏi lại *"Từ chối cuộc gọi, đúng không?"* – nói **"đúng"** (hoặc "không" lần nữa) mới từ chối – hoặc **giữ lâu** nửa dưới màn hình (nút TỪ CHỐI màu đỏ) |
 
 Nghe máy xong app tự **bật loa ngoài** và đưa **âm lượng cuộc gọi lên tối đa**.
 
@@ -36,7 +36,7 @@ Nghe máy xong app tự **bật loa ngoài** và đưa **âm lượng cuộc g�
 ### Cuộc gọi Zalo / WhatsApp
 
 1. Chuông Zalo/WhatsApp reo khoảng **3 giây** (Zalo đổ chuông ngắn hơn sim), rồi app nói: *"Có điện thoại Zalo! … gọi. Nói: nghe."* Các lần sau như cuộc gọi sim.
-2. Vì chuông Zalo/WhatsApp vẫn kêu (app không tắt được), app chỉ nhận **"nghe"**, "nghe máy", "bắt máy", "trả lời" để nghe máy (không nhận "có", "ừ", "vâng" – tiếng chuông hay bị nghe nhầm thành các từ này). Nói **"không"** để từ chối.
+2. Vì chuông Zalo/WhatsApp vẫn kêu (app không tắt được), app chỉ nhận câu có chữ **"nghe"** (như trên), "bắt máy", "trả lời" để nghe máy (không nhận "có", "ừ", "vâng" – tiếng chuông hay bị nghe nhầm thành các từ này). Nói **"không"** để từ chối (có hỏi lại).
 3. **Phím cạnh máy không dùng được** để nghe cuộc gọi Zalo/WhatsApp (Android không chuyển phím cho app), nên app không nhắc cách này.
 4. Nghe máy xong, app tự bật **loa ngoài** bằng Trợ năng:
    - chờ màn hình cuộc gọi Zalo/WhatsApp hiện ổn định và cuộc gọi đã kết nối, rồi chạm nút **Loa** một lần;
@@ -120,7 +120,7 @@ App đọc to *"Bạn vừa nhỡ cuộc gọi từ …"*, luôn kèm **tên** (
 ## 3. Tin nhắn và thông báo khác
 
 - **Tin Zalo, WhatsApp, SMS:** đọc to người gửi và nội dung (lọc emoji, cắt tin quá dài). Tin thoại Zalo chỉ được báo "một tin nhắn thoại".
-- **Tin nhóm:** mặc định chỉ lưu lại (riêng với tin cá nhân), không đọc to; nói "tin nhóm" để nghe.
+- **Tin nhóm:** mặc định chỉ lưu lại (riêng với tin cá nhân), không đọc to; nói "tin nhóm" để nghe (app đọc *"nhóm hello, Thỏ Ngoan: Hi"*). Bật mục "Đọc to cả tin nhắn NHÓM" trong Cài đặt Trợ Lý nếu muốn đọc to cả tin nhóm. App nhận ra tin nhóm Zalo qua tiêu đề "Nhóm: …", tiêu đề cuộc trò chuyện khác tên người gửi, hoặc có nhiều người gửi (Zalo không tự đánh dấu tin nhóm).
 - Đang gọi điện thì không đọc, lưu lại; gọi xong app nhắc số tin mới.
 - Máy để im lặng / rung **vẫn đọc** (người khiếm thị không nhìn thấy máy đang im lặng).
 - **Giờ yên tĩnh 22h–6h mặc định bật:** ban đêm không đọc tin nhắn (vẫn báo cuộc gọi); hết giờ yên tĩnh app nhắc số tin mới một lần.

@@ -191,10 +191,18 @@ object NotificationParser {
         val now = System.currentTimeMillis()
         val out = mutableListOf<Pair<StoredMessage, Boolean>>()
 
+        val notifTitle = n.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+        val markedGroup = n.extras.getBoolean(Notification.EXTRA_IS_GROUP_CONVERSATION, false)
         val style = NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(n)
         if (style != null && style.messages.isNotEmpty()) {
-            val group = style.isGroupConversation
-            val groupTitle = style.conversationTitle?.toString()
+            val rawTitle = style.conversationTitle?.toString()
+            val groupTitle = rawTitle?.let { cleanGroupTitle(it) }?.ifBlank { null }
+            val me = style.user.name?.toString()
+            val senders = style.messages.mapNotNull { it.person?.name?.toString() }
+                .filter { it != me }.map { TextUtils.normalize(it) }.distinct()
+            // Zalo không đánh dấu tin nhóm (chỉ ghi tiêu đề "Nhóm: …"), nên xét thêm nhiều dấu hiệu.
+            val groupBySignals = style.isGroupConversation || markedGroup ||
+                looksLikeGroupTitle(rawTitle) || looksLikeGroupTitle(notifTitle) || senders.size >= 2
             val lastTs = lastTimestampByKey[key]
             val candidates = style.messages.filter { m ->
                 m.person != null && (m.text?.isNotBlank() == true) &&
@@ -205,6 +213,8 @@ object NotificationParser {
                 val sender = m.person?.name?.toString() ?: groupTitle ?: "không rõ"
                 val text = m.text.toString()
                 if (seenRecently(pkg, sender, text, now)) continue
+                // Tiêu đề cuộc trò chuyện khác tên người gửi (tiêu đề "hello", người gửi "Thỏ Ngoan") = nhóm.
+                val group = groupBySignals || (rawTitle != null && !sameName(rawTitle, sender))
                 val senderLabel = if (group && groupTitle != null) "nhóm $groupTitle, $sender" else sender
                 out += StoredMessage(app, senderLabel, text, m.timestamp, false, group) to group
             }
@@ -219,9 +229,27 @@ object NotificationParser {
         // Thông báo kiểu "5 tin nhắn mới" là tóm tắt, không đọc.
         val norm = TextUtils.normalize(text)
         if (Regex("^\\d+ (tin nhắn mới|new messages)").containsMatchIn(norm)) return emptyList()
-        val isGroup = Regex("^.+: ").containsMatchIn(text) && pkg in AppIds.VOIP
-        out += StoredMessage(app, title, text, now, false, isGroup) to isGroup
+        val isGroup = markedGroup || looksLikeGroupTitle(title) ||
+            (Regex("^.+: ").containsMatchIn(text) && pkg in AppIds.VOIP)
+        val label = if (isGroup && looksLikeGroupTitle(title)) "nhóm ${cleanGroupTitle(title)}" else title
+        out += StoredMessage(app, label, text, now, false, isGroup) to isGroup
         return out
+    }
+
+    private val GROUP_TITLE = Regex("^\\s*(nhóm|group)\\s*[:：]", RegexOption.IGNORE_CASE)
+
+    /** Tiêu đề kiểu "Nhóm: hello" (Zalo) hoặc "Group: …". */
+    private fun looksLikeGroupTitle(title: String?): Boolean = title != null && GROUP_TITLE.containsMatchIn(title)
+
+    /** "Nhóm: hello" → "hello". */
+    fun cleanGroupTitle(title: String): String = title.replace(GROUP_TITLE, "").trim()
+
+    /** Hai tên là một người (bỏ dấu câu, emoji; một tên chứa tên kia ở đầu). */
+    private fun sameName(a: String, b: String): Boolean {
+        val x = TextUtils.normalize(a)
+        val y = TextUtils.normalize(b)
+        if (x.isBlank() || y.isBlank()) return true
+        return x == y || x.startsWith(y) || y.startsWith(x)
     }
 
     private fun remember(key: String, ts: Long) {

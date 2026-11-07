@@ -133,6 +133,14 @@ object Prefs {
         get() = sp.getLong("saved_ring_time", 0L)
         set(v) = sp.edit().putLong("saved_ring_time", v).apply()
 
+    /** Mức chuông máy trước khi app kéo lên 100% lúc có cuộc gọi đến (-1 = không có). */
+    var savedCallRingVolume: Int
+        get() = sp.getInt("saved_call_ring_volume", -1)
+        set(v) = sp.edit().putInt("saved_call_ring_volume", v).apply()
+    var savedCallRingTime: Long
+        get() = sp.getLong("saved_call_ring_time", 0L)
+        set(v) = sp.edit().putLong("saved_call_ring_time", v).apply()
+
     var lastMissedNumber: String?
         get() = sp.getString("last_missed_number", null)
         set(v) = sp.edit().putString("last_missed_number", v).apply()

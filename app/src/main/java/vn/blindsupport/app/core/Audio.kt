@@ -63,8 +63,50 @@ object RingVolumeGuard {
         Prefs.savedRingVolume = -1
     }
 
+    /**
+     * Có cuộc gọi đến: kéo âm lượng chuông máy lên tối đa (nhớ mức cũ để trả lại khi xong).
+     * Máy đang ở chế độ im lặng/rung thì Android không cho đổi – app vẫn đọc tên bằng "Chuông báo".
+     */
+    fun raiseForCall(context: Context) {
+        val am = context.getSystemService(AudioManager::class.java) ?: return
+        if (am.ringerMode != AudioManager.RINGER_MODE_NORMAL) return
+        val cur = am.getStreamVolume(AudioManager.STREAM_RING)
+        val max = am.getStreamMaxVolume(AudioManager.STREAM_RING)
+        if (cur >= max) return
+        if (Prefs.savedCallRingVolume < 0) {
+            Prefs.savedCallRingVolume = cur
+            Prefs.savedCallRingTime = System.currentTimeMillis()
+        }
+        try {
+            am.setStreamVolume(AudioManager.STREAM_RING, max, 0)
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Không kéo được chuông lên", e)
+        }
+    }
+
+    /** Cuộc gọi đã được nghe / từ chối / kết thúc: trả chuông máy về mức người dùng đã đặt. */
+    fun endCall(context: Context) {
+        val v = Prefs.savedCallRingVolume
+        if (v < 0) return
+        val am = context.getSystemService(AudioManager::class.java)
+        try {
+            if (am != null && am.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
+                am.setStreamVolume(AudioManager.STREAM_RING, v, 0)
+            }
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Không trả lại được chuông", e)
+        }
+        Prefs.savedCallRingVolume = -1
+    }
+
     /** Gọi khi app khởi động: nếu còn mức chuông cũ chưa trả lại (app bị tắt giữa chừng) thì trả lại. */
     fun restoreIfStale(context: Context) {
+        if (Prefs.savedCallRingVolume >= 0 &&
+            System.currentTimeMillis() - Prefs.savedCallRingTime > 5 * 60_000L
+        ) {
+            restore(context)
+            endCall(context)
+        }
         if (Prefs.savedRingVolume >= 0 &&
             System.currentTimeMillis() - Prefs.savedRingTime > 2 * 60_000L
         ) {

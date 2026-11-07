@@ -4,6 +4,9 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 
 enum class CallIntent { ANSWER, DECLINE;
@@ -43,9 +46,11 @@ enum class CallIntent { ANSWER, DECLINE;
         /** ANSWER nếu đổi ý muốn nghe, DECLINE nếu xác nhận từ chối, null nếu không rõ. */
         fun parseDeclineConfirm(text: String): CallIntent? {
             val words = TextUtils.words(text)
-            if (words.isEmpty() || words.size > 3) return null
-            if ("nghe" in words) return ANSWER
-            return if (words.all { it in CONFIRM_SET }) DECLINE else null
+            if (words.isEmpty()) return null
+            if (hasFreeNghe(words)) return ANSWER
+            if (words.size > 3) return null
+            // "không nghe" (chữ "nghe" bị phủ định) cũng là xác nhận từ chối.
+            return if (words.all { it in CONFIRM_SET || it == "nghe" }) DECLINE else null
         }
 
         /**
@@ -62,9 +67,20 @@ enum class CallIntent { ANSWER, DECLINE;
          * Chỉ nhận khi câu nghe được ngắn (tối đa 3 từ) và MỌI từ đều thuộc cùng một nhóm.
          * Câu lẫn từ khác (thường là tiếng ồn hoặc người xung quanh nói chuyện) bị bỏ qua.
          */
+        /** Chữ đứng ngay trước "nghe" làm nó thành ý từ chối: "không nghe", "chưa nghe", "đừng nghe". */
+        private val NEGATORS = setOf("không", "chưa", "đừng")
+
+        /** Câu có chữ "nghe" đứng tự do (không bị "không/chưa/đừng" phủ định ngay phía trước). */
+        fun hasFreeNghe(words: List<String>): Boolean =
+            words.indices.any { i -> words[i] == "nghe" && (i == 0 || words[i - 1] !in NEGATORS) }
+
         fun parse(text: String, ringerAudible: Boolean = false): CallIntent? {
             val words = TextUtils.words(text)
-            if (words.isEmpty() || words.size > 3) return null
+            if (words.isEmpty()) return null
+            // Có chữ "nghe" ở bất kỳ đâu là nhấc máy, dù trước/sau có chữ lạ ("nghe em", "sẽ nghe"):
+            // bộ nhận dạng offline hay ghép thêm chữ từ hơi thở, tiếng ồn. Lỡ nhấc máy ít hại hơn mất cuộc gọi.
+            if (hasFreeNghe(words)) return ANSWER
+            if (words.size > 3) return null
             val t = " " + words.joinToString(" ") + " "
             // "không nghe" có chữ "nghe": xét từ chối trước.
             if (words.all { it in DECLINE_SET || it == "nghe" } && DECLINE_WORDS.any { t.contains(" $it ") }) {
@@ -108,6 +124,8 @@ class VoiceCallPrompt(
         // Giữ micro bằng dịch vụ tiền cảnh trong lúc hỏi, để nghe được câu trả lời kể cả khi
         // ColorOS không cho màn hình cuộc gọi bật lên. Không bật được thì vẫn chạy như cũ.
         val micHeld = Prefs.voiceAnswer && MicForegroundService.start(context)
+        // Chuông máy lên 100% suốt lúc có cuộc gọi (lỡ bị kéo nhỏ cũng vẫn nghe thấy), xong trả lại.
+        RingVolumeGuard.raiseForCall(context)
         try {
             // Rung liên tục suốt lúc có cuộc gọi (phòng khi để máy trong túi, nghe kém).
             if (Prefs.vibrateOnCall) startVibration()
@@ -196,6 +214,7 @@ class VoiceCallPrompt(
         } finally {
             stopVibration()
             RingVolumeGuard.restore(context)
+            RingVolumeGuard.endCall(context)
             if (micHeld) MicForegroundService.stop(context)
         }
     }
@@ -205,8 +224,13 @@ class VoiceCallPrompt(
      * (dư âm tiếng bíp hay bị nghe nhầm thành "không").
      */
     private suspend fun callBeep() {
-        if (!Speaker.longBeep(800)) Beeper.beep()
-        delay(500)
+        coroutineScope {
+            // Chuẩn bị sẵn bộ nhận dạng trong lúc đang bíp, hết bíp là nghe được ngay.
+            val prep = async(Dispatchers.Default) { VoiceRecognizer.prepare(CallIntent.PHRASES) }
+            if (!Speaker.longBeep(800)) Beeper.beep()
+            prep.await()
+        }
+        delay(250)
     }
 
     @Suppress("DEPRECATION")

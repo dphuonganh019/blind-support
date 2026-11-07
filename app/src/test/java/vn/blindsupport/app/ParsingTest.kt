@@ -30,10 +30,24 @@ class ParsingTest {
 
     @Test fun callIntent_ignoresNoiseLikeResults() {
         // Từ một âm tiết dễ bị tiếng ồn tạo ra, câu lẫn từ khác, câu quá dài: không được tính.
-        for (t in listOf("", "tắt", "bận", "thôi", "à nghe", "mẹ ơi", "không có không không",
-            "có không", "gọi điện", "chuông", "nghe à")) {
+        for (t in listOf("", "tắt", "bận", "thôi", "mẹ ơi", "không có không không",
+            "có không", "gọi điện", "chuông", "chưa nghe", "đừng nghe")) {
             assertNull(t, CallIntent.parse(t))
         }
+    }
+
+    @Test fun callIntent_anyFreeNgheAnswers() {
+        // Nhật ký thật: bộ nhận dạng offline hay ghép thêm chữ ("nghe em", "sẽ nghe", "cúp nghe").
+        for (t in listOf("nghe em", "sẽ nghe", "à nghe", "nghe à", "cúp nghe", "ừ nghe đi", "nghe nha em ơi à")) {
+            assertEquals(t, CallIntent.ANSWER, CallIntent.parse(t))
+            assertEquals(t, CallIntent.ANSWER, CallIntent.parse(t, ringerAudible = true))
+        }
+        // "nghe" bị phủ định ngay phía trước: không phải nghe máy.
+        assertEquals(CallIntent.DECLINE, CallIntent.parse("không nghe"))
+        assertEquals(CallIntent.DECLINE, CallIntent.parseDeclineConfirm("không nghe"))
+        assertEquals(CallIntent.ANSWER, CallIntent.parseDeclineConfirm("à nghe em"))
+        assertEquals(CallIntent.DECLINE, CallIntent.parseDeclineConfirm("đúng"))
+        assertNull(CallIntent.parseDeclineConfirm("sư"))
     }
 
     @Test fun callIntent_ringerAudible_onlyClearAnswers() {
