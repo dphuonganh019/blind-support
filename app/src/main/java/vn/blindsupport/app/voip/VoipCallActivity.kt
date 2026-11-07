@@ -70,8 +70,8 @@ class VoipCallActivity : ComponentActivity() {
                     return true
                 }
                 KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                    // Chỉ ngừng hỏi, không từ chối.
-                    VoipCallController.stopAsking()
+                    // Phím cạnh máy bất kỳ = nghe máy.
+                    VoipCallController.answer(this)
                     return true
                 }
             }

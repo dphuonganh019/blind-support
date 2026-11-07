@@ -14,6 +14,8 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import vn.blindsupport.app.call.CallManager
 import vn.blindsupport.app.core.AudioState
+import vn.blindsupport.app.core.CallSpeaker
+import vn.blindsupport.app.core.Speaker
 import vn.blindsupport.app.core.Prefs
 import vn.blindsupport.app.core.TextUtils
 import vn.blindsupport.app.ui.VoiceCommandActivity
@@ -62,7 +64,27 @@ class BlindAccessibilityService : AccessibilityService() {
      * Hệ thống gửi MỌI phím bấm qua đây trước. Trả về true = app giữ lại phím đó.
      * Chỉ can thiệp phím giảm âm lượng, và chỉ khi không có cuộc gọi nào.
      */
+    /** Đã nghe máy bằng phím trong lần nhấn này: giữ lại cả lúc nhả phím. */
+    private var answeredByKey = false
+
     override fun onKeyEvent(event: KeyEvent): Boolean {
+        val volumeKey = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+        // Đang có cuộc gọi đến đổ chuông: phím âm lượng bất kỳ = nghe máy.
+        if (volumeKey) {
+            val voipRinging = VoipCallController.isRinging()
+            val simRinging = CallManager.ringingCall()
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && (voipRinging || simRinging != null)) {
+                answeredByKey = true
+                Speaker.stop()
+                if (voipRinging) VoipCallController.answer(this)
+                else if (simRinging != null && CallManager.calls().size == 1) CallManager.answer(simRinging)
+                return true
+            }
+            if (answeredByKey) {
+                if (event.action == KeyEvent.ACTION_UP) answeredByKey = false
+                return true
+            }
+        }
         if (event.keyCode != KeyEvent.KEYCODE_VOLUME_DOWN) return false
         // Phím nhả mà app không giữ lúc nhấn: để hệ thống xử lý như thường.
         if (event.action == KeyEvent.ACTION_UP && !tracking) return false
@@ -156,12 +178,18 @@ class BlindAccessibilityService : AccessibilityService() {
             UiClicker.finish(task, false)
             return
         }
+        val speakerTask = task.keywords === UiClicker.SPEAKER_KEYS
+        // Âm thanh đã ra loa ngoài rồi: không chạm vào nút Loa nữa (chạm sẽ TẮT loa).
+        if (speakerTask && CallSpeaker.isSpeakerActive(this)) {
+            UiClicker.finish(task, true)
+            return
+        }
         val roots = mutableListOf<AccessibilityNodeInfo>()
         runCatching { windows }.getOrNull()?.forEach { w -> w.root?.let { roots += it } }
         rootInActiveWindow?.let { roots += it }
         for (root in roots) {
             if (root.packageName?.toString() != task.pkg) continue
-            when (findAndClick(root, task.keywords)) {
+            when (findAndClick(root, task.keywords, allowTap = speakerTask)) {
                 Result.CLICKED, Result.ALREADY_ON -> {
                     UiClicker.finish(task, true)
                     return
@@ -173,7 +201,11 @@ class BlindAccessibilityService : AccessibilityService() {
 
     private enum class Result { CLICKED, ALREADY_ON, NOT_FOUND }
 
-    private fun findAndClick(root: AccessibilityNodeInfo, keywords: List<String>): Result {
+    /**
+     * [allowTap]: nút không nhận lệnh "bấm" của trợ năng (Zalo tự xử lý cú chạm) thì chạm giả lập
+     * bằng ngón tay ảo vào giữa nút. Chỉ dùng cho nút Loa.
+     */
+    private fun findAndClick(root: AccessibilityNodeInfo, keywords: List<String>, allowTap: Boolean = false): Result {
         val normKeys = keywords.map { " " + TextUtils.normalize(it) + " " }
         val queue = ArrayDeque<AccessibilityNodeInfo>()
         queue.add(root)
@@ -192,6 +224,7 @@ class BlindAccessibilityService : AccessibilityService() {
                 if (target != null && target.isEnabled &&
                     target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                 ) return Result.CLICKED
+                if (target == null && allowTap && tapCenter(node)) return Result.CLICKED
             }
             for (i in 0 until node.childCount) node.getChild(i)?.let { queue.add(it) }
         }
@@ -211,6 +244,18 @@ class BlindAccessibilityService : AccessibilityService() {
         val l = label(node)
         if (l.isBlank()) return false
         return normKeys.any { l.contains(it) }
+    }
+
+    /** Chạm giả lập vào giữa nút trên màn hình. */
+    private fun tapCenter(node: AccessibilityNodeInfo): Boolean {
+        val r = android.graphics.Rect()
+        node.getBoundsInScreen(r)
+        if (r.isEmpty || r.width() < 4 || r.height() < 4) return false
+        val path = android.graphics.Path().apply { moveTo(r.exactCenterX(), r.exactCenterY()) }
+        val gesture = android.accessibilityservice.GestureDescription.Builder()
+            .addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 80))
+            .build()
+        return runCatching { dispatchGesture(gesture, null, null) }.getOrDefault(false)
     }
 
     private fun isClickableNode(n: AccessibilityNodeInfo): Boolean =

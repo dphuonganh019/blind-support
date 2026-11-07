@@ -46,6 +46,9 @@ class SetupActivity : ComponentActivity() {
      * Liệt kê tên danh bạ có chữ mà bộ nhận dạng giọng nói không biết (ví dụ tên tiếng Anh):
      * những người này không gọi được bằng giọng nói. Người hỗ trợ nên đổi tên trong danh bạ.
      */
+    private fun ringFirstLabel(): String =
+        "Đổ chuông trước khi đọc tên người gọi: ${Prefs.ringFirstSeconds} giây (bấm để đổi)"
+
     private fun renderUnknownNames() {
         unknownNames.removeAllViews()
         lifecycleScope.launch {
@@ -182,6 +185,15 @@ class SetupActivity : ComponentActivity() {
 
         col.addView(heading("3. Tùy chọn"))
         col.addView(toggle("Hỏi \"có muốn nghe không\" và nghe câu trả lời bằng giọng nói", Prefs.voiceAnswer) { Prefs.voiceAnswer = it })
+        lateinit var ringButton: Button
+        ringButton = button(ringFirstLabel()) {
+            val options = listOf(0, 3, 6, 10)
+            val next = options[(options.indexOf(Prefs.ringFirstSeconds).coerceAtLeast(0) + 1) % options.size]
+            Prefs.ringFirstSeconds = next
+            ringButton.text = ringFirstLabel()
+        }
+        col.addView(ringButton)
+        col.addView(toggle("Rung liên tục khi có cuộc gọi đến", Prefs.vibrateOnCall) { Prefs.vibrateOnCall = it })
         col.addView(toggle("Tự bật loa ngoài khi nghe máy", Prefs.autoSpeaker) { Prefs.autoSpeaker = it })
         col.addView(toggle("Âm lượng cuộc gọi tối đa khi nghe máy", Prefs.maxCallVolume) { Prefs.maxCallVolume = it })
         col.addView(toggle("Báo cuộc gọi Zalo / WhatsApp", Prefs.voipCalls) { Prefs.voipCalls = it })

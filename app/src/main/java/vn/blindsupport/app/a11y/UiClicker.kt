@@ -11,7 +11,8 @@ import vn.blindsupport.app.core.Prefs
  * (ví dụ nút Loa ngay sau khi nghe máy). Ngoài khoảng thời gian đó app không đụng vào Zalo.
  */
 object UiClicker {
-    val SPEAKER_KEYS = listOf("loa", "loa ngoài", "speaker", "bật loa", "speakerphone", "loudspeaker", "spk")
+    // "speakerbtn": mã nút Loa của Zalo (call_speakerBtn), tìm theo mã trước.
+    val SPEAKER_KEYS = listOf("speakerbtn", "loa", "loa ngoài", "speaker", "bật loa", "speakerphone", "loudspeaker", "spk")
     val ANSWER_KEYS = listOf("trả lời", "nghe", "answer", "accept", "chấp nhận")
     val DECLINE_KEYS = listOf("từ chối", "decline", "reject", "kết thúc", "end call", "hang up")
 

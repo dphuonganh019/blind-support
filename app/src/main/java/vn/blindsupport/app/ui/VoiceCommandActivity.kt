@@ -45,6 +45,8 @@ class VoiceCommandActivity : ComponentActivity() {
         const val MAX_GROUP_READ = 10
         /** Gợi ý cho bộ nhận dạng Google khi hỏi "đúng không" (Android 13+): nghe "đúng" chuẩn hơn. */
         val CONFIRM_HINTS = listOf("đúng", "đúng rồi", "không", "vâng", "có")
+        /** Gợi ý khi chờ đọc số điện thoại hoặc số thứ tự. */
+        val DIGIT_HINTS = listOf("không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín", "số")
     }
 
     private lateinit var statusView: TextView
@@ -150,7 +152,7 @@ class VoiceCommandActivity : ComponentActivity() {
 
         val contacts = withContext(Dispatchers.IO) { ContactsRepo.allContacts(this@VoiceCommandActivity) }
         val phrases = CommandParser.phrases(contacts)
-        nameHints = contacts.map { it.name }
+        nameHints = contacts.map { it.name } + listOf("gọi", "gọi số", "gọi Zalo", "gọi WhatsApp")
         val greeting = "Mời nói lệnh sau tiếng bíp."
 
         var command: Command? = null
@@ -166,8 +168,9 @@ class VoiceCommandActivity : ComponentActivity() {
                 finish()
                 return
             }
-            // Bộ nhận dạng Google trả về vài cách nghe: lấy cách đầu tiên hiểu được thành lệnh.
-            command = heard.firstNotNullOfOrNull { CommandParser.parse(it, contacts) }
+            // Bộ nhận dạng Google trả về vài cách nghe: lấy cách hiểu được thành lệnh (số điện thoại thì
+            // ưu tiên cách nghe đủ 10 số).
+            command = bestCommand(heard, contacts)
             logHeard(heard, command != null)
             if (command != null) break
         }
@@ -182,7 +185,7 @@ class VoiceCommandActivity : ComponentActivity() {
 
     private suspend fun execute(command: Command, contacts: List<Contact>) {
         when (command) {
-            is Command.CallContact -> confirmAndCall(command.contact.name, command.contact.number)
+            is Command.CallContact -> confirmAndCall(command.contact.name, command.contact.number, command.contact.contactId)
             is Command.ChooseContact -> chooseAndCall(command.candidates)
             is Command.TooManyContacts -> askWhoToCall(
                 "Có ${command.count} người có tên ${command.spoken}. Hãy nói thêm tên, ví dụ tên đầy đủ, sau tiếng bíp.",
@@ -324,9 +327,9 @@ class VoiceCommandActivity : ComponentActivity() {
             status("Gọi ai?")
             Speaker.speak(prompt)
             Beeper.beep()
-            val heard = hear(phrases)
+            val heard = hear(phrases, hints = nameHints + DIGIT_HINTS)
             if (heard.isEmpty()) {
-                prompt = "Tôi chưa nghe rõ. Hãy nói tên, hoặc đọc số điện thoại, sau tiếng bíp."
+                prompt = "Tôi chưa nghe rõ. Hãy nói tên, hoặc nói: gọi số, rồi đọc số điện thoại, sau tiếng bíp."
                 continue
             }
             if (heard.any { TextUtils.normalize(it) in setOf("hủy", "thôi", "không") }) {
@@ -334,26 +337,48 @@ class VoiceCommandActivity : ComponentActivity() {
                 Speaker.speak("Đã hủy.")
                 return
             }
-            val cmds = heard.map { h ->
+            val cmd = bestCommand(heard.map { h ->
                 val n = TextUtils.normalize(h)
-                CommandParser.parse(if (n.startsWith("gọi")) n else "gọi $n", contacts)
-            }
-            val cmd = cmds.firstOrNull {
-                it is Command.CallContact || it is Command.ChooseContact || it is Command.CallNumber
-            } ?: cmds.firstOrNull()
+                if (n.startsWith("gọi")) n else "gọi $n"
+            }, contacts)
             logHeard(heard, cmd is Command.CallContact || cmd is Command.ChooseContact || cmd is Command.CallNumber)
             when (cmd) {
-                is Command.CallContact -> return confirmAndCall(cmd.contact.name, cmd.contact.number)
+                is Command.CallContact -> return confirmAndCall(cmd.contact.name, cmd.contact.number, cmd.contact.contactId)
                 is Command.ChooseContact -> return chooseAndCall(cmd.candidates)
                 is Command.CallNumber -> return callByNumber(cmd.digits)
                 is Command.TooManyContacts ->
                     prompt = "Có ${cmd.count} người có tên ${cmd.spoken}. Hãy nói thêm tên sau tiếng bíp."
                 else ->
-                    prompt = "Không tìm thấy tên này trong danh bạ. Hãy nói lại tên, hoặc đọc số điện thoại, sau tiếng bíp."
+                    prompt = "Không tìm thấy tên này trong danh bạ. Hãy nói lại tên, hoặc nói: gọi số, rồi đọc số điện thoại, sau tiếng bíp."
             }
         }
         Speaker.speak("Đã hủy cuộc gọi.")
     }
+
+    /**
+     * Chọn lệnh từ các cách nghe của bộ nhận dạng. Thường lấy cách đầu tiên hiểu được; riêng khi đó
+     * là số điện thoại thì chọn cách nghe ra số đủ 10 chữ số (hoặc dài nhất), vì khi không có mạng
+     * cách đầu tiên hay bị ngắt sớm, thiếu số.
+     */
+    private fun bestCommand(heard: List<String>, contacts: List<Contact>): Command? {
+        val cmds = heard.mapNotNull { CommandParser.parse(it, contacts) }
+        val first = cmds.firstOrNull() ?: return null
+        val numberOf: (Command) -> String? = { c ->
+            when (c) {
+                is Command.CallNumber -> c.digits
+                is Command.AppCall -> (c.inner as? Command.CallNumber)?.digits
+                else -> null
+            }
+        }
+        if (numberOf(first) == null) return first
+        return cmds.filter { numberOf(it) != null }
+            .maxWithOrNull(compareBy<Command>({ if (isFullNumber(numberOf(it)!!)) 1 else 0 }, { numberOf(it)!!.length }))
+            ?: first
+    }
+
+    /** Số di động Việt Nam 10 số, máy bàn 11 số; số ngắn không bắt đầu bằng 0 (113, 1900…) thì không xét. */
+    private fun isFullNumber(digits: String): Boolean =
+        !digits.startsWith("0") || digits.length in 10..11
 
     /**
      * Nhiều người khớp tên: đọc danh sách có số thứ tự, người dùng nói số thứ tự để gọi ngay.
@@ -372,13 +397,13 @@ class VoiceCommandActivity : ComponentActivity() {
         for (attempt in 0 until 2) {
             Speaker.speak(prompt)
             Beeper.beep()
-            val ans = hear(Choice.phrases(), hints = emptyList())
+            val ans = hear(Choice.phrases(), hints = DIGIT_HINTS)
             val picked = ans.firstNotNullOfOrNull { Choice.parse(it, candidates.size) }
             logHeard(ans, picked != null)
             when (val choice = picked) {
                 is Choice.Pick -> {
                     val c = candidates[choice.index]
-                    placeCall(c.number, labels[choice.index])
+                    placeCall(c.number, labels[choice.index], c.contactId)
                     return
                 }
                 Choice.Cancel -> {
@@ -393,7 +418,7 @@ class VoiceCommandActivity : ComponentActivity() {
         Speaker.speak("Đã hủy cuộc gọi.")
     }
 
-    private suspend fun confirmAndCall(name: String, number: String) {
+    private suspend fun confirmAndCall(name: String, number: String, contactId: Long = -1L) {
         val spokenName = TextUtils.cleanForSpeech(name).ifBlank { "số " + TextUtils.speakableNumber(number) }
         status("Gọi $name?")
         for (attempt in 0 until 2) {
@@ -408,7 +433,7 @@ class VoiceCommandActivity : ComponentActivity() {
             logHeard(ans, answer != null)
             when (answer) {
                 Confirm.YES -> {
-                    placeCall(number, spokenName)
+                    placeCall(number, spokenName, contactId)
                     return
                 }
                 Confirm.NO -> {
@@ -419,59 +444,102 @@ class VoiceCommandActivity : ComponentActivity() {
             }
         }
         Speaker.speak("Đã hủy cuộc gọi.")
+    }
+
+    /** Nghe một số điện thoại; chọn cách nghe ra số đủ 10 chữ số (hoặc dài nhất). */
+    private suspend fun hearNumber(): String {
+        val heard = hear(DigitWords.WORDS + listOf("số", "xong"), hints = DIGIT_HINTS)
+        val options = heard.map { DigitWords.toDigits(it) }.filter { it.isNotEmpty() }
+        val best = options.maxWithOrNull(compareBy<String>({ if (isFullNumber(it)) 1 else 0 }, { it.length })) ?: ""
+        logHeard(heard, best.length >= 3)
+        return best
+    }
+
+    private fun isReread(heard: List<String>): Boolean = heard.any { h ->
+        val t = " " + TextUtils.normalize(h) + " "
+        t.contains(" đọc lại ") || t.contains(" nói lại ") || t.contains(" đọc lại số ")
     }
 
     /**
      * Gọi theo số đọc bằng giọng nói. [initial]: phần số đã đọc kèm trong câu "gọi …".
-     * Đọc lại số để xác nhận: "đúng" thì gọi ngay, "không" thì hủy.
+     * Số thiếu chữ số thì xin đọc lại cả số. Đọc lại số để xác nhận: "đúng" thì gọi ngay,
+     * "đọc lại" thì đọc lại số, "không" thì hủy.
      */
     private suspend fun callByNumber(initial: String) {
         var digits = initial
-        if (digits.length < 3) {
-            status("Hãy đọc số điện thoại")
-            Speaker.speak("Hãy đọc số điện thoại sau tiếng bíp. Đọc xong thì im lặng chờ.")
-            Beeper.beep()
-            val heard = hear(DigitWords.WORDS + listOf("số", "xong"), hints = emptyList())
-            digits = heard.map { DigitWords.toDigits(it) }.firstOrNull { it.length >= 3 } ?: digits
-            logHeard(heard, digits.length >= 3)
-        }
-        status(digits)
-        if (digits.length < 3) {
-            Speaker.speak("Tôi chưa nghe được số điện thoại. Đã hủy cuộc gọi.")
-            return
-        }
-        val spoken = TextUtils.speakableNumber(digits)
-        for (attempt in 0 until 2) {
-            Speaker.speak(
-                if (attempt == 0) "Bạn muốn gọi số $spoken, đúng không? Nói: đúng, để thực hiện cuộc gọi. Nói: không, để hủy."
-                else "Số $spoken. Hãy nói: đúng, hoặc: không, sau tiếng bíp."
-            )
-            Beeper.beep()
-            val ans = hear(Confirm.PHRASES, hints = CONFIRM_HINTS)
-            val answer = ans.firstNotNullOfOrNull { Confirm.parse(it) }
-            logHeard(ans, answer != null)
-            when (answer) {
-                Confirm.YES -> {
+        var rereads = 0
+        while (true) {
+            if (digits.length < 3) {
+                if (rereads >= 3) {
+                    Speaker.speak("Tôi chưa nghe được số điện thoại. Đã hủy cuộc gọi.")
+                    return
+                }
+                rereads++
+                status("Hãy đọc số điện thoại")
+                Speaker.speak("Hãy đọc số điện thoại sau tiếng bíp. Đọc xong thì im lặng chờ.")
+                Beeper.beep()
+                digits = hearNumber()
+                continue
+            }
+            // Số bắt đầu bằng 0 mà không đủ 10 số (11 số với máy bàn): xin đọc lại cả số (tối đa 2 lần).
+            if (!isFullNumber(digits) && rereads < 2) {
+                rereads++
+                status(digits)
+                Speaker.speak(
+                    "Tôi mới nghe được ${digits.length} số: ${TextUtils.speakableNumber(digits)}. " +
+                        "Số điện thoại cần 10 số. Hãy đọc lại cả số điện thoại sau tiếng bíp."
+                )
+                Beeper.beep()
+                val again = hearNumber()
+                if (again.length >= 3) digits = again
+                continue
+            }
+            status(digits)
+            val spoken = TextUtils.speakableNumber(digits)
+            var answer: Confirm? = null
+            var reread = false
+            for (attempt in 0 until 2) {
+                Speaker.speak(
+                    if (attempt == 0) "Bạn muốn gọi ${viaApp?.let { "$it " } ?: ""}số $spoken, đúng không? " +
+                        "Nói: đúng, để thực hiện cuộc gọi. Nói: đọc lại, để đọc lại số. Nói: không, để hủy."
+                    else "Số $spoken. Hãy nói: đúng, đọc lại, hoặc: không, sau tiếng bíp."
+                )
+                Beeper.beep()
+                val ans = hear(Confirm.PHRASES + listOf("đọc lại", "nói lại"), hints = CONFIRM_HINTS + listOf("đọc lại"))
+                reread = isReread(ans)
+                answer = if (reread) null else ans.firstNotNullOfOrNull { Confirm.parse(it) }
+                logHeard(ans, reread || answer != null)
+                if (reread || answer != null) break
+            }
+            when {
+                reread -> {
+                    digits = ""
+                    rereads = 0
+                    continue
+                }
+                answer == Confirm.YES -> {
                     placeCall(digits, "số $spoken")
                     return
                 }
-                Confirm.NO -> {
+                answer == Confirm.NO -> {
                     Speaker.speak("Đã hủy.")
                     return
                 }
-                null -> Unit
+                else -> {
+                    Speaker.speak("Đã hủy cuộc gọi.")
+                    return
+                }
             }
         }
-        Speaker.speak("Đã hủy cuộc gọi.")
     }
 
-    private suspend fun placeCall(number: String, spokenName: String) {
+    private suspend fun placeCall(number: String, spokenName: String, contactId: Long = -1L) {
         if (checkSelfPermission(Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
             Speaker.speak("Ứng dụng chưa có quyền gọi điện. Hãy nhờ người hỗ trợ.")
             return
         }
         viaApp?.let { app ->
-            if (tryAppCall(app, number, spokenName)) return
+            if (tryAppCall(app, number, spokenName, contactId)) return
             Speaker.speak("Không tìm thấy cách gọi $app cho người này. Tôi sẽ gọi điện thường bằng sim.")
         }
         Speaker.speak("Đang gọi $spokenName.")
@@ -490,11 +558,11 @@ class VoiceCommandActivity : ComponentActivity() {
      * Gọi qua Zalo/WhatsApp bằng dòng "gọi" mà ứng dụng đó đồng bộ vào danh bạ. Trả về false nếu
      * người này không có dòng như vậy (hoặc mở không được).
      */
-    private suspend fun tryAppCall(app: String, number: String, spokenName: String): Boolean {
+    private suspend fun tryAppCall(app: String, number: String, spokenName: String, contactId: Long): Boolean {
         val key = if (app == "Zalo") "zalo" else "whatsapp"
         val pkg = if (app == "Zalo") "com.zing.zalo" else "com.whatsapp"
         val (action, diag) = withContext(Dispatchers.IO) {
-            AppCallFinder.find(this@VoiceCommandActivity, key, number, spokenName)
+            AppCallFinder.find(this@VoiceCommandActivity, key, contactId, number, spokenName)
         }
         VoiceRecognizer.log("[$app] $spokenName: $diag", action != null)
         if (action == null) return false
@@ -514,8 +582,16 @@ class VoiceCommandActivity : ComponentActivity() {
     /** Tên trong danh bạ, giúp bộ nhận dạng Google nghe đúng tên khi gọi. */
     private var nameHints: List<String> = emptyList()
 
-    /** Nghe một câu (Google nếu có, không thì offline). Trả về các cách nghe, tốt nhất trước. */
+    /**
+     * Nghe một câu (Google nếu có, không thì offline). Trả về các cách nghe, tốt nhất trước.
+     * Người lớn tuổi hay chậm bắt đầu nói: nếu lượt đầu (khoảng 5 giây) chưa nghe thấy gì thì
+     * bíp ngắn và nghe thêm một lượt nữa, tổng cộng khoảng 10 giây.
+     */
     private suspend fun hear(phrases: Collection<String>, hints: List<String> = nameHints): List<String> {
+        status("Mời nói...")
+        val first = SpeechInput.listen(this, phrases, hints)
+        if (first.isNotEmpty()) return first
+        Speaker.longBeep(350)
         status("Mời nói...")
         return SpeechInput.listen(this, phrases, hints)
     }

@@ -307,11 +307,12 @@ object CommandParser {
     const val HELP =
         "Các lệnh bạn có thể nói: Gọi, kèm tên trong danh bạ, ví dụ: gọi Mẹ. Có thể nói một phần tên; " +
             "nếu nhiều người trùng tên, tôi sẽ đọc danh sách để bạn chọn bằng số thứ tự. " +
-            "Gọi, kèm số điện thoại, ví dụ: gọi không chín một hai. " +
+            "Gọi số, kèm số điện thoại, ví dụ: gọi số không chín một hai. " +
+            "Gọi Zalo, hoặc gọi WhatsApp, kèm tên, để gọi qua Zalo hay WhatsApp. " +
             "Gọi lại, để gọi lại người vừa gọi. Đọc tin nhắn. Tin nhóm, để nghe tin nhắn nhóm. " +
             "Cuộc gọi nhỡ. Mấy giờ. Pin. " +
             "Danh bạ, để nghe tên trong danh bạ. To lên, hoặc nhỏ xuống, để chỉnh âm lượng giọng đọc. " +
             "Nói chậm, hoặc nói nhanh. Khi có cuộc gọi đến, nói: nghe, hoặc: không. " +
-            "Bạn cũng có thể bấm phím tăng âm lượng để nghe máy. Phím giảm âm lượng chỉ để tắt chuông, " +
-            "không từ chối cuộc gọi. Khi đang đọc tin nhắn, bấm phím giảm âm lượng để dừng đọc."
+            "Hoặc bấm phím bất kỳ ở cạnh máy để nghe máy. " +
+            "Khi đang đọc tin nhắn, bấm phím giảm âm lượng để dừng đọc."
 }

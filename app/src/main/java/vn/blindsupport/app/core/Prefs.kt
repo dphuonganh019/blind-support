@@ -60,6 +60,16 @@ object Prefs {
         get() = sp.getInt("quiet_end", 6)
         set(v) = sp.edit().putInt("quiet_end", v).apply()
 
+    /** Để chuông máy reo bao nhiêu giây trước khi app tắt chuông và đọc tên người gọi (0, 3, 6, 10). */
+    var ringFirstSeconds: Int
+        get() = sp.getInt("ring_first_seconds", 6)
+        set(v) = sp.edit().putInt("ring_first_seconds", v.coerceIn(0, 20)).apply()
+
+    /** Rung liên tục trong lúc có cuộc gọi đến. */
+    var vibrateOnCall: Boolean
+        get() = bool("vibrate_on_call", true)
+        set(v) = setBool("vibrate_on_call", v)
+
     /** Có tin nhắn đến trong giờ yên tĩnh mà chưa đọc to: hết giờ yên tĩnh thì nhắc một lần. */
     var quietPending: Boolean
         get() = bool("quiet_pending", false)

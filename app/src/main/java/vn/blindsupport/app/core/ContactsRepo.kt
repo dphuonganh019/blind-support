@@ -7,7 +7,12 @@ import android.net.Uri
 import android.provider.CallLog
 import android.provider.ContactsContract
 
-data class Contact(val name: String, val number: String) {
+data class Contact(
+    val name: String,
+    val number: String,
+    /** Mã người trong danh bạ máy (-1 nếu không rõ). Dùng để tìm dòng "Gọi Zalo/WhatsApp" của người đó. */
+    val contactId: Long = -1L,
+) {
     val normalizedName: String = TextUtils.normalize(name)
 }
 
@@ -45,6 +50,7 @@ object ContactsRepo {
                     ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
                     ContactsContract.CommonDataKinds.Phone.NUMBER,
                     ContactsContract.CommonDataKinds.Phone.IS_SUPER_PRIMARY,
+                    ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
                 ),
                 null, null,
                 ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC"
@@ -53,7 +59,7 @@ object ContactsRepo {
                     val name = c.getString(0) ?: continue
                     val number = c.getString(1) ?: continue
                     val primary = c.getInt(2) == 1
-                    val contact = Contact(name.trim(), number)
+                    val contact = Contact(name.trim(), number, c.getLong(3))
                     if (contact.normalizedName.isEmpty()) continue
                     val existing = result[contact.normalizedName]
                     if (existing == null || primary) result[contact.normalizedName] = contact
@@ -163,7 +169,7 @@ object AppCallFinder {
      * Tìm dòng gọi thoại của [appKey] ("zalo"/"whatsapp") cho người có số [number] (hoặc tên [name]).
      * Trả về hành động tìm được (hoặc null) và một dòng mô tả để ghi nhật ký khi cần sửa lỗi.
      */
-    fun find(context: Context, appKey: String, number: String, name: String): Pair<AppCallAction?, String> {
+    fun find(context: Context, appKey: String, contactId: Long, number: String, name: String): Pair<AppCallAction?, String> {
         if (context.checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
             return null to "chưa có quyền danh bạ"
         }
@@ -212,12 +218,22 @@ object AppCallFinder {
                 }
             }
         }
+        // 1) Dòng gọi nằm chung một người trong danh bạ (chắc chắn nhất, không phụ thuộc định dạng số).
+        val byId = if (contactId > 0) calls.firstOrNull { it.contactId == contactId } else null
+        // 2) Cùng số điện thoại.
         val byNumber = calls.firstOrNull { r ->
             target in numbersByContact[r.contactId].orEmpty() ||
                 TextUtils.dialableNumber(r.d1.substringBefore('@')) == target
         }
+        // 3) Cùng tên.
         val byName = calls.firstOrNull { TextUtils.normalize(it.display) == TextUtils.normalize(name) }
-        val hit = byNumber ?: byName
-        return hit?.let { AppCallAction(it.id, it.mime) } to diag
+        val hit = byId ?: byNumber ?: byName
+        val how = when {
+            hit == null -> "không khớp (mã người $contactId, số $target, các mã có dòng gọi: ${calls.map { it.contactId }.distinct().take(8)})"
+            hit === byId -> "khớp theo mã người"
+            hit === byNumber -> "khớp theo số"
+            else -> "khớp theo tên"
+        }
+        return hit?.let { AppCallAction(it.id, it.mime) } to "$diag; $how"
     }
 }

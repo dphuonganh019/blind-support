@@ -107,7 +107,28 @@ class BlindInCallService : InCallService() {
         }
     }
 
-    /** Phím giảm âm lượng khi đang đổ chuông: ngừng hỏi và tắt chuông, KHÔNG từ chối cuộc gọi. */
+    /**
+     * Android gọi hàm này khi người dùng bấm phím cạnh máy (tăng/giảm âm lượng, nguồn) lúc đang
+     * đổ chuông. Android giữ lại phím, không cho ứng dụng biết là phím nào, nên app coi mọi lần bấm
+     * phím cạnh máy là NGHE MÁY (đơn giản nhất cho người không nhìn thấy).
+     */
+    override fun onSilenceRinger() {
+        super.onSilenceRinger()
+        // Chính app vừa tắt chuông để đọc tên người gọi: không phải người dùng bấm phím.
+        if (System.currentTimeMillis() - CallManager.selfSilencedAt < 2_000L) return
+        val ringing = calls.firstOrNull { it.stateCompat() == Call.STATE_RINGING } ?: return
+        val others = calls.count { it !== ringing && it.stateCompat() != Call.STATE_DISCONNECTED }
+        if (others > 0) {
+            // Đang có cuộc gọi khác (cuộc gọi chờ): chỉ tắt chuông, không tự nghe.
+            silenceRinging()
+            return
+        }
+        stopPrompt(ringing)
+        Speaker.stop()
+        CallManager.answer(ringing)
+    }
+
+    /** Ngừng hỏi và tắt chuông, KHÔNG từ chối cuộc gọi. */
     fun silenceRinging() {
         val ringing = calls.filter { it.stateCompat() == Call.STATE_RINGING }
         ringing.forEach { stopPrompt(it) }

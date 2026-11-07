@@ -1,6 +1,9 @@
 package vn.blindsupport.app.core
 
 import android.content.Context
+import android.media.AudioAttributes
+import android.os.VibrationEffect
+import android.os.Vibrator
 import kotlinx.coroutines.delay
 
 enum class CallIntent { ANSWER, DECLINE;
@@ -88,17 +91,28 @@ class VoiceCallPrompt(
         // ColorOS không cho màn hình cuộc gọi bật lên. Không bật được thì vẫn chạy như cũ.
         val micHeld = Prefs.voiceAnswer && MicForegroundService.start(context)
         try {
+            // Rung liên tục suốt lúc có cuộc gọi (phòng khi để máy trong túi, nghe kém).
+            if (Prefs.vibrateOnCall) startVibration()
+            // Để chuông thật của máy reo vài giây trước, cho người nghe kém kịp nhận ra có cuộc gọi.
+            val ringFirstMs = Prefs.ringFirstSeconds * 1000L
+            var rang = 0L
+            while (rang < ringFirstMs && isRinging()) {
+                delay(250)
+                rang += 250
+            }
+            if (!isRinging()) return
             if (Prefs.voiceAnswer) {
                 ringerSilenced = silenceRinger?.invoke() == true
             }
             var round = 0
             while (isRinging() && round < 12) {
                 if (!ringerSilenced) RingVolumeGuard.lower(context)
+                val attention = if (appName != null) "Có điện thoại $appName! " else "Có điện thoại! "
                 val sentence = when {
-                    !Prefs.voiceAnswer -> "Có $kind từ $callerLabel."
-                    round == 0 -> "Có $kind từ $callerLabel. Bạn có muốn nghe không? " +
-                        "Hãy nói: nghe, hoặc: không, sau tiếng bíp."
-                    else -> "Vẫn đang có $kind từ $callerLabel. Hãy nói: nghe, hoặc: không, sau tiếng bíp."
+                    !Prefs.voiceAnswer -> "${attention}Cuộc gọi từ $callerLabel."
+                    round == 0 -> "${attention}Cuộc gọi từ $callerLabel. Bạn có muốn nghe không? " +
+                        "Hãy nói: nghe, hoặc: không, sau tiếng bíp. Hoặc bấm phím bất kỳ ở cạnh máy để nghe."
+                    else -> "${attention}Vẫn đang có $kind từ $callerLabel. Hãy nói: nghe, hoặc: không, sau tiếng bíp."
                 }
                 Speaker.speak(sentence)
                 if (!isRinging()) return
@@ -134,13 +148,30 @@ class VoiceCallPrompt(
                         waited += 250
                     }
                 } else {
-                    delay(800)
+                    // Chuông thật đã tắt: app tự phát tiếng chuông xen giữa các lần hỏi.
+                    if (isRinging()) Speaker.ring(3_000)
                 }
                 round++
             }
         } finally {
+            stopVibration()
             RingVolumeGuard.restore(context)
             if (micHeld) MicForegroundService.stop(context)
         }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun vibrator(): Vibrator? = context.getSystemService(Vibrator::class.java)
+
+    @Suppress("DEPRECATION")
+    private fun startVibration() {
+        runCatching {
+            val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build()
+            vibrator()?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 900, 700), 0), attrs)
+        }
+    }
+
+    private fun stopVibration() {
+        runCatching { vibrator()?.cancel() }
     }
 }

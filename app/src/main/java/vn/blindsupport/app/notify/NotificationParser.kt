@@ -116,21 +116,48 @@ object NotificationParser {
         return isCallNotification(n) && (n.flags and Notification.FLAG_ONGOING_EVENT) != 0
     }
 
-    /** Thông báo cuộc gọi nhỡ Zalo/WhatsApp: trả về tên người gọi. */
-    fun missedVoipCall(sbn: StatusBarNotification): String? {
+    /** Thông báo cuộc gọi nhỡ của Zalo/WhatsApp. [name]/[number] null nếu thông báo không ghi rõ. */
+    data class MissedVoip(val name: String?, val number: String?, val raw: String)
+
+    /** Chữ trong thông báo không phải tên người: "Cuộc gọi nhỡ", "một người", "2 cuộc gọi"... */
+    private fun isGenericName(s: String): Boolean {
+        val t = TextUtils.normalize(s)
+        if (t.isBlank()) return true
+        val generic = listOf(
+            "cuộc gọi", "gọi nhỡ", "missed", "một người", "1 người", "ai đó", "someone", "người gọi",
+            "không xác định", "unknown", "zalo", "whatsapp",
+        )
+        return generic.any { t.contains(it) } || t.all { it.isDigit() || it == ' ' }
+    }
+
+    private val PHONE_RE = Regex("(\\+?84|0)[\\d .\\-]{8,14}\\d")
+
+    fun missedVoipCall(sbn: StatusBarNotification): MissedVoip? {
         if (sbn.packageName !in AppIds.VOIP) return null
         val n = sbn.notification ?: return null
-        val text = TextUtils.normalize(
-            (n.extras.getCharSequence(Notification.EXTRA_TEXT) ?: "").toString() + " " +
-                (n.extras.getCharSequence(Notification.EXTRA_TITLE) ?: "").toString()
-        )
+        val title = (n.extras.getCharSequence(Notification.EXTRA_TITLE) ?: "").toString()
+        val body = (n.extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
+            ?: n.extras.getCharSequence(Notification.EXTRA_TEXT) ?: "").toString()
+        val text = TextUtils.normalize("$body $title")
         val isMissed = n.category == CATEGORY_MISSED_CALL ||
-            text.contains("cuộc gọi nhỡ") || text.contains("missed voice call") ||
+            text.contains("cuộc gọi nhỡ") || text.contains("gọi nhỡ") || text.contains("missed voice call") ||
             text.contains("missed video call") || text.contains("missed call")
         if (!isMissed) return null
-        return n.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
-            ?.takeIf { !TextUtils.normalize(it).contains("cuộc gọi nhỡ") && !TextUtils.normalize(it).contains("missed") }
-            ?: "một người"
+
+        // Tên: người trong thông báo kiểu cuộc gọi, tiêu đề, hoặc "… từ <tên>" trong nội dung.
+        var name: String? = null
+        if (Build.VERSION.SDK_INT >= 31) {
+            name = n.extras.parcel<Person>(Notification.EXTRA_CALL_PERSON)?.name?.toString()
+        }
+        if (name.isNullOrBlank() || isGenericName(name)) name = title.takeIf { !isGenericName(it) }
+        if (name == null) {
+            Regex("(?:từ|from)\\s+(.+)$", RegexOption.IGNORE_CASE).find(body.trim())?.groupValues?.get(1)
+                ?.trim()?.trimEnd('.', '!')?.takeIf { !isGenericName(it) }?.let { name = it }
+        }
+        // Số điện thoại ghi trong thông báo (nếu có).
+        val number = PHONE_RE.find("$title $body")?.value?.filter { it.isDigit() || it == '+' }
+        if (name != null && number != null && name!!.filter { it.isDigit() }.length >= 9) name = null
+        return MissedVoip(name, number, "$title | $body")
     }
 
     private fun callerName(n: Notification): String? {

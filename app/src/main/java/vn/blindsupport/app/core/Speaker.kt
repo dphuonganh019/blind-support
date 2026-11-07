@@ -191,6 +191,45 @@ object Speaker {
         }
     }
 
+    /**
+     * Tiếng chuông điện thoại do app tự phát ("reng reng"), dài khoảng [durationMs], qua luồng
+     * "Chuông báo" với cùng độ to như giọng đọc: vẫn kêu khi máy để im lặng. Dùng xen giữa các lần
+     * hỏi "nghe hay không" vì chuông thật của cuộc gọi sim đã phải tắt để micro nghe rõ.
+     */
+    suspend fun ring(durationMs: Int): Boolean = mutex.withLock {
+        if (!::appContext.isInitialized) return@withLock false
+        withVoiceVolume {
+            val sr = 22050
+            val total = sr * durationMs / 1000
+            val cycle = sr * 2 // 2 giây: reng 0,4s – nghỉ 0,2s – reng 0,4s – nghỉ 1s
+            val on1 = (sr * 0.4).toInt()
+            val off1 = (sr * 0.2).toInt()
+            val on2 = (sr * 0.4).toInt()
+            val fade = sr / 100
+            val samples = ShortArray(total) { i ->
+                val k = i % cycle
+                val seg = when {
+                    k < on1 -> k
+                    k < on1 + off1 -> -1
+                    k < on1 + off1 + on2 -> k - on1 - off1
+                    else -> -1
+                }
+                if (seg < 0) 0.toShort() else {
+                    val len = on1
+                    val env = when {
+                        seg < fade -> seg.toDouble() / fade
+                        seg > len - fade -> (len - seg).toDouble() / fade
+                        else -> 1.0
+                    }
+                    val t = i.toDouble() / sr
+                    val v = (kotlin.math.sin(2 * Math.PI * 440.0 * t) + kotlin.math.sin(2 * Math.PI * 480.0 * t)) * 0.45
+                    (v * env * 32767).toInt().coerceIn(-32767, 32767).toShort()
+                }
+            }
+            runCatching { play(Pcm(samples, sr, 1)) }.getOrDefault(false)
+        }
+    }
+
     /** Ba tiếng "tít" ngắn, cao: báo giọng đọc bị lỗi. */
     private suspend fun errorTone() {
         val sr = 22050

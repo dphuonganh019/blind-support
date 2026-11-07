@@ -18,8 +18,8 @@ import vn.blindsupport.app.ui.BigUi
 
 /**
  * Màn hình cuộc gọi sim.
- * - Đang đổ chuông: nửa trên NGHE (xanh), nửa dưới TỪ CHỐI (đỏ). Phím tăng âm lượng = nghe,
- *   phím giảm âm lượng = chỉ tắt chuông (KHÔNG từ chối, tránh bấm nhầm khi muốn vặn nhỏ).
+ * - Đang đổ chuông: nửa trên NGHE (xanh), nửa dưới TỪ CHỐI (đỏ). Bấm phím bất kỳ ở cạnh máy = nghe
+ *   (với cuộc gọi sim, Android giữ phím lại và báo qua BlindInCallService.onSilenceRinger).
  * - Đang gọi: nửa trên bật/tắt loa, nửa dưới GIỮ để kết thúc (giữ lâu để tránh chạm nhầm).
  */
 class InCallActivity : ComponentActivity() {
@@ -177,9 +177,9 @@ class InCallActivity : ComponentActivity() {
                     return true
                 }
                 KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                    // Chỉ tắt chuông và ngừng hỏi, không từ chối (dễ bấm nhầm khi muốn vặn nhỏ).
+                    // Phím cạnh máy bất kỳ = nghe máy.
                     Speaker.stop()
-                    CallManager.service?.silenceRinging()
+                    CallManager.answer(ringing)
                     return true
                 }
             }

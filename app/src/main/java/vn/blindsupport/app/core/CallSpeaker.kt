@@ -38,6 +38,19 @@ object CallSpeaker {
         }
     }
 
+    /** Âm thanh cuộc gọi đang ra loa ngoài chưa. */
+    fun isSpeakerActive(context: Context): Boolean {
+        val am = context.getSystemService(AudioManager::class.java) ?: return false
+        return runCatching {
+            if (Build.VERSION.SDK_INT >= 31) {
+                am.communicationDevice?.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+            } else {
+                @Suppress("DEPRECATION")
+                am.isSpeakerphoneOn
+            }
+        }.getOrDefault(false)
+    }
+
     /** Gọi khi cuộc gọi kết thúc: bỏ chế độ loa ngoài app đã ép. */
     fun release(context: Context) {
         if (!forced) return

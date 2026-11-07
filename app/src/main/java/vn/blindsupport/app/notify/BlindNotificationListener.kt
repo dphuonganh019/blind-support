@@ -10,6 +10,14 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import vn.blindsupport.app.App
+import vn.blindsupport.app.core.ContactsRepo
+import vn.blindsupport.app.core.TextUtils
+import vn.blindsupport.app.core.VoiceRecognizer
 import vn.blindsupport.app.core.MessageStore
 import vn.blindsupport.app.core.Prefs
 import vn.blindsupport.app.core.RingVolumeGuard
@@ -82,9 +90,9 @@ class BlindNotificationListener : NotificationListenerService() {
             return
         }
         // 3) Cuộc gọi nhỡ Zalo/WhatsApp
-        NotificationParser.missedVoipCall(sbn)?.let { who ->
+        NotificationParser.missedVoipCall(sbn)?.let { missed ->
             if (AppIds.readEnabled(sbn.packageName) || Prefs.voipCalls) {
-                MessageAnnouncer.enqueueText("Bạn vừa nhỡ cuộc gọi ${AppIds.label(sbn.packageName)} từ $who.")
+                announceMissed(sbn.packageName, missed)
             }
             return
         }
@@ -99,6 +107,39 @@ class BlindNotificationListener : NotificationListenerService() {
             }
             MessageStore.add(msg)
             MessageAnnouncer.enqueueMessage(msg)
+        }
+    }
+
+    /**
+     * Đọc to cuộc gọi nhỡ Zalo/WhatsApp, luôn kèm TÊN (danh bạ máy, sim, Zalo/WhatsApp) hoặc SỐ.
+     * Zalo còn báo cả cuộc gọi SIM nhỡ từ người đã kết bạn: khi đó thông báo hay không ghi tên,
+     * nên lấy tên/số từ nhật ký cuộc gọi sim vừa nhỡ và nói là "cuộc gọi" (không phải "cuộc gọi Zalo").
+     */
+    private fun announceMissed(pkg: String, missed: NotificationParser.MissedVoip) {
+        val app = applicationContext
+        App.appScope.launch {
+            // Chờ nhật ký cuộc gọi sim kịp ghi.
+            delay(2_000)
+            val recentSim = withContext(Dispatchers.IO) {
+                ContactsRepo.recentMissedCalls(app, withinMs = 3 * 60_000L).firstOrNull()
+            }
+            val numberName = missed.number?.let { withContext(Dispatchers.IO) { ContactsRepo.lookupName(app, it) } }
+            val sameAsSim = recentSim != null && (
+                (missed.name == null && missed.number == null) ||
+                    (missed.number != null && recentSim.number != null &&
+                        TextUtils.dialableNumber(missed.number) == TextUtils.dialableNumber(recentSim.number))
+                )
+            val who = when {
+                sameAsSim -> recentSim!!.name ?: recentSim.number?.let { "số " + TextUtils.speakableNumber(it) }
+                numberName != null -> numberName
+                missed.name != null -> missed.name
+                missed.number != null -> "số " + TextUtils.speakableNumber(missed.number)
+                recentSim != null -> recentSim.name ?: recentSim.number?.let { "số " + TextUtils.speakableNumber(it) }
+                else -> null
+            } ?: "một người không rõ tên"
+            val kind = if (sameAsSim) "cuộc gọi" else "cuộc gọi ${AppIds.label(pkg)}"
+            VoiceRecognizer.log("[Nhỡ ${AppIds.label(pkg)}] ${missed.raw} → $kind từ $who", who != "một người không rõ tên")
+            MessageAnnouncer.enqueueText("Bạn vừa nhỡ $kind từ ${TextUtils.cleanForSpeech(who)}.")
         }
     }
 

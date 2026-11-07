@@ -173,7 +173,7 @@ class ParsingTest {
     @Test fun help_doesNotSayVolumeDownDeclines() {
         // Lỗi B3: phím giảm âm lượng chỉ tắt chuông, không từ chối.
         assertFalse(CommandParser.HELP.contains("phím giảm âm lượng để từ chối"))
-        assertTrue(CommandParser.HELP.contains("tắt chuông"))
+        assertTrue(CommandParser.HELP.contains("phím bất kỳ ở cạnh máy"))
     }
 
     @Test fun digits() {

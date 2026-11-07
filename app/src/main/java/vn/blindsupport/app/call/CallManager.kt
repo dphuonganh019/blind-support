@@ -87,7 +87,11 @@ object CallManager {
     }
 
     /** Tắt chuông cuộc gọi đang đổ (ứng dụng điện thoại mặc định được phép). */
+    /** Lúc app TỰ tắt chuông (để không hiểu nhầm là người dùng bấm phím cạnh máy). */
+    @Volatile var selfSilencedAt = 0L
+
     fun silenceRinger(context: Context): Boolean = try {
+        selfSilencedAt = System.currentTimeMillis()
         context.getSystemService(TelecomManager::class.java)?.silenceRinger()
         true
     } catch (e: Exception) {
