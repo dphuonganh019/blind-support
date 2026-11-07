@@ -49,10 +49,11 @@ class SetupActivity : ComponentActivity() {
     private fun renderUnknownNames() {
         unknownNames.removeAllViews()
         lifecycleScope.launch {
-            val contacts = withContext(Dispatchers.IO) { ContactsRepo.allContacts(this@SetupActivity) }
-            val bad = contacts.mapNotNull { c ->
-                val unknown = VoiceRecognizer.unknownWords(c.normalizedName)
-                if (unknown.isEmpty()) null else c.name to unknown
+            val bad = withContext(Dispatchers.IO) {
+                ContactsRepo.allContacts(this@SetupActivity).mapNotNull { c ->
+                    val unknown = VoiceRecognizer.unknownWords(this@SetupActivity, c.normalizedName)
+                    if (unknown.isEmpty()) null else c.name to unknown
+                }
             }
             if (bad.isEmpty()) return@launch
             unknownNames.addView(note(

@@ -69,15 +69,30 @@ object VoiceRecognizer {
         loaded
     }
 
+    @Volatile private var vocabulary: Set<String>? = null
+
     /**
      * Các chữ trong [text] mà model nhận dạng không có trong từ điển (nên không bao giờ nghe ra được).
-     * Trả về danh sách rỗng nếu model chưa nạp.
+     * Đọc từ điển từ file graph/words.txt của model đã giải nén. Không có file (hoặc model chưa nạp)
+     * thì trả về danh sách rỗng.
      */
-    fun unknownWords(text: String): List<String> {
-        val m = model ?: return emptyList()
-        return TextUtils.words(text).filter { w ->
-            runCatching { m.findWord(w) < 0 }.getOrDefault(false)
-        }.distinct()
+    fun unknownWords(context: Context, text: String): List<String> {
+        if (model == null) return emptyList()
+        val vocab = vocabulary ?: loadVocabulary(context).also { vocabulary = it }
+        if (vocab.isEmpty()) return emptyList()
+        return TextUtils.words(text).filter { it !in vocab }.distinct()
+    }
+
+    private fun loadVocabulary(context: Context): Set<String> {
+        val dirs = listOfNotNull(context.getExternalFilesDir(null), context.filesDir)
+        for (d in dirs) {
+            val f = java.io.File(d, "model/graph/words.txt")
+            if (!f.isFile) continue
+            return runCatching {
+                f.useLines { lines -> lines.mapNotNull { it.substringBefore(' ').takeIf { w -> w.isNotBlank() } }.toHashSet() }
+            }.getOrDefault(emptySet())
+        }
+        return emptySet()
     }
 
     fun hasMicPermission(context: Context): Boolean =
