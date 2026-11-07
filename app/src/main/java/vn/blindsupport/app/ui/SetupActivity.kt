@@ -295,6 +295,9 @@ class SetupActivity : ComponentActivity() {
                     open(Intent("com.android.settings.TTS_SETTINGS"))
                 }
             }
+            "speech" -> open(
+                Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.googlequicksearchbox"))
+            )
             "model" -> lifecycleScope.launch {
                 VoiceRecognizer.ensureModel(this@SetupActivity)
                 renderChecks()

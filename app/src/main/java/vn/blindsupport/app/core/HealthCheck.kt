@@ -89,7 +89,12 @@ object HealthCheck {
             )
         }
         list += Item(
-            "model", "Bộ nhận dạng giọng nói offline", VoiceRecognizer.isModelLoaded, true,
+            "speech", "Nhận dạng giọng nói Google (nghe lệnh, tên, số chính xác hơn)",
+            SpeechInput.systemAvailable(context), false,
+            "chưa có bộ nhận dạng giọng nói Google, nên nghe lệnh kém chính xác"
+        )
+        list += Item(
+            "model", "Bộ nhận dạng giọng nói offline (dự phòng khi mất mạng)", VoiceRecognizer.isModelLoaded, true,
             "bộ nhận dạng giọng nói chưa sẵn sàng"
         )
         return list

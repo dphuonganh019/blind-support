@@ -30,7 +30,9 @@ Mọi câu hỏi của app đều kết thúc bằng *"… sau tiếng bíp"*, r
 - **"Nói chậm" / "Nói nhanh"** – chỉnh tốc độ đọc
 - **"Hướng dẫn"** – nghe lại danh sách lệnh
 
-App nghe **trọn câu** (chờ bạn im lặng khoảng 1,5 giây) rồi mới xử lý, nên ngập ngừng giữa câu không sao. Từ đệm như "à", "ừ", "đi", "nhé", "ạ" được bỏ qua. Câu dài hơn lệnh quá 2 chữ (thường là tiếng TV) bị bỏ qua. Không hiểu lệnh thì app nói lại chữ đã nghe được: *"Tôi nghe được: …"*.
+Nghe lệnh dùng **bộ nhận dạng giọng nói Google** có sẵn trên máy (nghe tên người và chữ số chính xác hơn nhiều); khi mất mạng hoặc máy không có thì tự chuyển sang bộ nhận dạng offline (kém chính xác hơn). Câu hỏi "nghe hay không" khi có cuộc gọi đến vẫn dùng bộ offline.
+
+App nghe **trọn câu** (chờ bạn im lặng khoảng 1,5 giây) rồi mới xử lý, nên ngập ngừng giữa câu không sao. Từ đệm như "à", "ừ", "đi", "nhé", "ạ" được bỏ qua. Câu dài hơn lệnh quá 2 chữ (thường là tiếng TV) bị bỏ qua. Chữ app nghe được hiện trên màn hình (cho người hỗ trợ xem) và được ghi vào nhật ký trong Cài đặt Trợ Lý.
 
 Khi app hỏi lại *"Gọi cho …, phải không?"*: nói **"đúng"**, "đúng rồi", "phải", "vâng", "có", "gọi đi" để gọi; **"không"**, "sai", "thôi", "hủy" để hủy. Câu dài hoặc lẫn từ khác không được tính – im lặng thì app tự hủy.
 

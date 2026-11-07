@@ -217,11 +217,12 @@ object CommandParser {
         }
         if (rest.isEmpty()) return if (saidNumber) Command.CallNumber("") else Command.CallWho
 
-        val digitWords = rest.filter { DigitWords.toDigits(it).isNotEmpty() }
-        val nonDigit = rest.size - digitWords.size
+        val perWord = rest.map { DigitWords.toDigits(it) }
+        val digits = perWord.joinToString("")
+        val nonDigit = perWord.count { it.isEmpty() }
         // Số điện thoại: toàn chữ số (cho phép lẫn 1 chữ nghe nhầm nếu đã đọc từ 3 số trở lên).
-        if ((digitWords.size >= 3 && nonDigit <= 1) || (saidNumber && nonDigit == 0)) {
-            return Command.CallNumber(DigitWords.toDigits(digitWords.joinToString(" ")))
+        if ((digits.length >= 3 && nonDigit <= 1) || (saidNumber && nonDigit == 0)) {
+            return Command.CallNumber(digits)
         }
         if (rest == listOf("không")) return Command.Cancel
 

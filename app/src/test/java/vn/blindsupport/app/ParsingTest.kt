@@ -117,6 +117,14 @@ class ParsingTest {
         assertEquals(Command.CallNumber("0345678912"),
             CommandParser.parse("gọi số không ba bốn năm sáu bảy tám chín một hai", book))
         assertEquals(Command.CallNumber("0345"), CommandParser.parse("gọi cho không ba bốn lăm", book))
+        // Bộ nhận dạng Google trả về số viết bằng chữ số.
+        assertEquals(Command.CallNumber("0345678912"), CommandParser.parse("Gọi 0345678912", book))
+        assertEquals(Command.CallNumber("0345678912"), CommandParser.parse("gọi số 0345 678 912", book))
+        assertEquals(Command.CallNumber("0345678912"), CommandParser.parse("Gọi 0345.678.912.", book))
+        assertEquals("0345", DigitWords.toDigits("0345"))
+        assertEquals(Choice.Pick(1), Choice.parse("2", 3))
+        assertEquals(Choice.Pick(1), Choice.parse("Số 2.", 3))
+        assertEquals(Command.CallContact(chiTrang), CommandParser.parse("Gọi Chị Trang.", book))
         // Lẫn một chữ nghe nhầm giữa các số vẫn là gọi số.
         assertEquals(Command.CallNumber("034567"), CommandParser.parse("gọi không ba bốn mẹ năm sáu bảy", book))
     }

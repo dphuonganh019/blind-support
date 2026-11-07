@@ -27,6 +27,7 @@ import vn.blindsupport.app.core.HealthCheck
 import vn.blindsupport.app.core.MessageStore
 import vn.blindsupport.app.core.Prefs
 import vn.blindsupport.app.core.Speaker
+import vn.blindsupport.app.core.SpeechInput
 import vn.blindsupport.app.core.TextUtils
 import vn.blindsupport.app.core.VoiceRecognizer
 import vn.blindsupport.app.notify.MessageAnnouncer
@@ -146,31 +147,26 @@ class VoiceCommandActivity : ComponentActivity() {
 
         val contacts = withContext(Dispatchers.IO) { ContactsRepo.allContacts(this@VoiceCommandActivity) }
         val phrases = CommandParser.phrases(contacts)
+        nameHints = contacts.map { it.name }
         val greeting = "Mời nói lệnh sau tiếng bíp."
 
         var command: Command? = null
-        var retryPrompt = "Tôi chưa nghe rõ. Mời nói lại sau tiếng bíp."
         for (attempt in 0 until 2) {
             status("Đang nghe...")
-            Speaker.speak(if (attempt == 0) greeting else retryPrompt)
+            Speaker.speak(if (attempt == 0) greeting else "Tôi chưa nghe rõ. Mời nói lại sau tiếng bíp.")
             Beeper.beep()
-            status("Mời nói...")
-            // Nghe trọn câu (kể cả khi ngập ngừng giữa chừng) rồi mới phân tích.
-            val heard = VoiceRecognizer.listenUtterance(this, phrases)
-            if (heard == null && VoiceRecognizer.lastError != null && !VoiceRecognizer.isModelLoaded) {
+            val heard = hear(phrases)
+            if (heard.isEmpty() && SpeechInput.lastEngine == "offline" &&
+                VoiceRecognizer.lastError != null && !VoiceRecognizer.isModelLoaded
+            ) {
                 Speaker.speak("Bộ nhận dạng giọng nói chưa sẵn sàng. Hãy thử lại sau ít phút.")
                 finish()
                 return
             }
-            command = heard?.let { CommandParser.parse(it, contacts) }
-            heard?.let { VoiceRecognizer.log(it, command != null) }
+            // Bộ nhận dạng Google trả về vài cách nghe: lấy cách đầu tiên hiểu được thành lệnh.
+            command = heard.firstNotNullOfOrNull { CommandParser.parse(it, contacts) }
+            logHeard(heard, command != null)
             if (command != null) break
-            if (heard != null) {
-                // Nghe ra chữ nhưng không khớp lệnh nào: nói lại chữ đã nghe để người dùng biết
-                // app có nghe thấy, chỉ là chưa hiểu (khác với im lặng không nghe thấy gì).
-                status("Nghe được: \"$heard\"")
-                retryPrompt = "Tôi nghe được: $heard. Đó không phải là lệnh. Mời nói lại sau tiếng bíp."
-            }
         }
         if (command == null) {
             Speaker.speak("Chưa nghe được lệnh. Nói: hướng dẫn, để nghe các lệnh.")
@@ -317,21 +313,24 @@ class VoiceCommandActivity : ComponentActivity() {
             status("Gọi ai?")
             Speaker.speak(prompt)
             Beeper.beep()
-            status("Mời nói tên hoặc số...")
-            val heard = VoiceRecognizer.listenUtterance(this, phrases)
-            if (heard == null) {
+            val heard = hear(phrases)
+            if (heard.isEmpty()) {
                 prompt = "Tôi chưa nghe rõ. Hãy nói tên, hoặc đọc số điện thoại, sau tiếng bíp."
                 continue
             }
-            val norm = TextUtils.normalize(heard)
-            if (norm == "hủy" || norm == "thôi" || norm == "không") {
-                VoiceRecognizer.log(heard, true)
+            if (heard.any { TextUtils.normalize(it) in setOf("hủy", "thôi", "không") }) {
+                logHeard(heard, true)
                 Speaker.speak("Đã hủy.")
                 return
             }
-            val cmd = CommandParser.parse("gọi $norm", contacts)
-            VoiceRecognizer.log(heard, cmd is Command.CallContact || cmd is Command.ChooseContact || cmd is Command.CallNumber)
-            status("Nghe được: \"$heard\"")
+            val cmds = heard.map { h ->
+                val n = TextUtils.normalize(h)
+                CommandParser.parse(if (n.startsWith("gọi")) n else "gọi $n", contacts)
+            }
+            val cmd = cmds.firstOrNull {
+                it is Command.CallContact || it is Command.ChooseContact || it is Command.CallNumber
+            } ?: cmds.firstOrNull()
+            logHeard(heard, cmd is Command.CallContact || cmd is Command.ChooseContact || cmd is Command.CallNumber)
             when (cmd) {
                 is Command.CallContact -> return confirmAndCall(cmd.contact.name, cmd.contact.number)
                 is Command.ChooseContact -> return chooseAndCall(cmd.candidates)
@@ -339,7 +338,7 @@ class VoiceCommandActivity : ComponentActivity() {
                 is Command.TooManyContacts ->
                     prompt = "Có ${cmd.count} người có tên ${cmd.spoken}. Hãy nói thêm tên sau tiếng bíp."
                 else ->
-                    prompt = "Tôi nghe được: $heard. Không tìm thấy trong danh bạ. Hãy nói lại tên sau tiếng bíp."
+                    prompt = "Không tìm thấy tên này trong danh bạ. Hãy nói lại tên, hoặc đọc số điện thoại, sau tiếng bíp."
             }
         }
         Speaker.speak("Đã hủy cuộc gọi.")
@@ -362,8 +361,10 @@ class VoiceCommandActivity : ComponentActivity() {
         for (attempt in 0 until 2) {
             Speaker.speak(prompt)
             Beeper.beep()
-            val ans = VoiceRecognizer.listen(this, Choice.phrases(), 7_000) { Choice.parse(it, candidates.size) != null }
-            when (val choice = ans?.let { Choice.parse(it, candidates.size) }) {
+            val ans = hear(Choice.phrases(), hints = emptyList())
+            val picked = ans.firstNotNullOfOrNull { Choice.parse(it, candidates.size) }
+            logHeard(ans, picked != null)
+            when (val choice = picked) {
                 is Choice.Pick -> {
                     val c = candidates[choice.index]
                     placeCall(c.number, "số ${choice.index + 1}, ${labels[choice.index]}")
@@ -374,9 +375,7 @@ class VoiceCommandActivity : ComponentActivity() {
                     return
                 }
                 null -> {
-                    val got = VoiceRecognizer.lastRejected
-                    prompt = (if (got != null) "Tôi nghe được: $got. " else "Tôi chưa nghe rõ. ") +
-                        "Hãy nói một số từ 1 đến ${candidates.size}. $list"
+                    prompt = "Tôi chưa nghe rõ. Hãy nói một số từ 1 đến ${candidates.size}. $list"
                 }
             }
         }
@@ -392,8 +391,10 @@ class VoiceCommandActivity : ComponentActivity() {
                 else "Hãy nói: đúng, hoặc: không, sau tiếng bíp."
             )
             Beeper.beep()
-            val ans = VoiceRecognizer.listen(this, Confirm.PHRASES, 7_000) { Confirm.parse(it) != null } ?: continue
-            when (Confirm.parse(ans)) {
+            val ans = hear(Confirm.PHRASES, hints = emptyList())
+            val answer = ans.firstNotNullOfOrNull { Confirm.parse(it) }
+            logHeard(ans, answer != null)
+            when (answer) {
                 Confirm.YES -> {
                     placeCall(number, spokenName)
                     return
@@ -416,9 +417,11 @@ class VoiceCommandActivity : ComponentActivity() {
         var digits = initial
         if (digits.length < 3) {
             status("Hãy đọc số điện thoại")
-            Speaker.speak("Hãy đọc từng số của số điện thoại sau tiếng bíp. Đọc xong thì im lặng chờ.")
+            Speaker.speak("Hãy đọc số điện thoại sau tiếng bíp. Đọc xong thì im lặng chờ.")
             Beeper.beep()
-            digits = VoiceRecognizer.listenDigits(this, initial = digits)
+            val heard = hear(DigitWords.WORDS + listOf("số", "xong"), hints = emptyList())
+            digits = heard.map { DigitWords.toDigits(it) }.firstOrNull { it.length >= 3 } ?: digits
+            logHeard(heard, digits.length >= 3)
         }
         status(digits)
         if (digits.length < 3) {
@@ -432,8 +435,10 @@ class VoiceCommandActivity : ComponentActivity() {
                 else "Số $spoken. Hãy nói: đúng, hoặc: không, sau tiếng bíp."
             )
             Beeper.beep()
-            val ans = VoiceRecognizer.listen(this, Confirm.PHRASES, 7_000) { Confirm.parse(it) != null }
-            when (ans?.let { Confirm.parse(it) }) {
+            val ans = hear(Confirm.PHRASES, hints = emptyList())
+            val answer = ans.firstNotNullOfOrNull { Confirm.parse(it) }
+            logHeard(ans, answer != null)
+            when (answer) {
                 Confirm.YES -> {
                     placeCall(digits, "số $spoken")
                     return
@@ -460,6 +465,22 @@ class VoiceCommandActivity : ComponentActivity() {
         } catch (e: Exception) {
             Speaker.speak("Không gọi được.")
         }
+    }
+
+    /** Tên trong danh bạ, giúp bộ nhận dạng Google nghe đúng tên khi gọi. */
+    private var nameHints: List<String> = emptyList()
+
+    /** Nghe một câu (Google nếu có, không thì offline). Trả về các cách nghe, tốt nhất trước. */
+    private suspend fun hear(phrases: Collection<String>, hints: List<String> = nameHints): List<String> {
+        status("Mời nói...")
+        return SpeechInput.listen(this, phrases, hints)
+    }
+
+    /** Ghi nhật ký và hiện chữ nghe được lên màn hình (cho người hỗ trợ xem). */
+    private fun logHeard(heard: List<String>, ok: Boolean) {
+        val first = heard.firstOrNull() ?: return
+        VoiceRecognizer.log("[${SpeechInput.lastEngine}] " + heard.joinToString(" | "), ok)
+        status("Nghe được: \"$first\"")
     }
 
     private fun status(text: String) {

@@ -394,7 +394,9 @@ object DigitWords {
     )
     val WORDS: List<String> = MAP.keys.toList()
 
+    /** Chữ số đọc bằng chữ ("ba") hoặc viết bằng số ("3", "0345" – bộ nhận dạng Google hay trả về số). */
     fun toDigits(text: String): String =
-        TextUtils.words(text).mapNotNull { w -> MAP[w] ?: w.singleOrNull()?.takeIf { it.isDigit() } }
-            .joinToString("")
+        TextUtils.words(text).mapNotNull { w ->
+            MAP[w]?.toString() ?: w.takeIf { it.isNotEmpty() && it.all(Char::isDigit) }
+        }.joinToString("")
 }
