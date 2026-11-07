@@ -78,7 +78,9 @@ class BlindInCallService : InCallService() {
             CallNotifications.showIncoming(this, call.displayName(this))
             InCallActivity.start(this)
             val others = calls.count { it != call && it.stateCompat() != Call.STATE_DISCONNECTED }
-            if (others > 0) {
+            if (!Prefs.appEnabled) {
+                // "Tạm tắt hết": chỉ hiện màn hình cuộc gọi như ứng dụng điện thoại bình thường.
+            } else if (others > 0) {
                 // Đang nói chuyện mà có cuộc gọi chờ: micro đang bận nên chỉ báo, không hỏi.
                 scope.launch { Speaker.speak("Có cuộc gọi chờ từ $spoken.") }
             } else {
@@ -114,6 +116,7 @@ class BlindInCallService : InCallService() {
      */
     override fun onSilenceRinger() {
         super.onSilenceRinger()
+        if (!Prefs.appEnabled) return
         // Chính app vừa tắt chuông để đọc tên người gọi: không phải người dùng bấm phím.
         if (System.currentTimeMillis() - CallManager.selfSilencedAt < 2_000L) return
         val ringing = calls.firstOrNull { it.stateCompat() == Call.STATE_RINGING }
@@ -181,6 +184,7 @@ class BlindInCallService : InCallService() {
 
         scope.launch {
             delay(700)
+            if (!Prefs.appEnabled) return@launch
             when {
                 cause == DisconnectCause.MISSED -> {
                     Prefs.lastMissedNumber = call.number()
@@ -200,6 +204,7 @@ class BlindInCallService : InCallService() {
     // ---------------- Loa ngoài ----------------
 
     private fun routeToSpeakerWithRetry() {
+        if (!Prefs.appEnabled) return
         scope.launch {
             for (wait in longArrayOf(0, 600, 1500, 3000)) {
                 delay(wait)

@@ -1,83 +1,163 @@
 # Trợ Lý Nghe Gọi
 
-App Android giúp người khiếm thị nghe gọi điện thoại và nghe tin nhắn bằng giọng nói tiếng Việt. Toàn bộ nhận dạng giọng nói và giọng đọc chạy **offline**, không cần internet (riêng Zalo/WhatsApp thì bản thân chúng cần mạng).
+App Android giúp người khiếm thị **nghe gọi điện thoại, gọi đi bằng giọng nói và nghe tin nhắn** (sim, Zalo, WhatsApp, SMS) bằng tiếng Việt. Người dùng không cần nhìn màn hình: app đọc to mọi thứ và nghe câu trả lời bằng giọng nói hoặc phím cạnh máy.
 
-## Tính năng
+- Hỗ trợ Android 10 trở lên. Máy mục tiêu: **OPPO A92** (Android 11 / ColorOS 11.1); đã thử trên Samsung.
+- Một người sáng mắt (người hỗ trợ) cần cài đặt máy một lần, khoảng 15–20 phút.
 
-| Tình huống | App làm gì |
+---
+
+## 1. Cuộc gọi đến
+
+### Cuộc gọi sim
+
+1. Chuông máy reo **6 giây** trước (chỉnh được 0 / 3 / 6 / 10 giây), máy **rung liên tục** suốt lúc có cuộc gọi.
+2. App tắt chuông thật (để tiếng chuông không lọt vào micro) và nói:
+   *"Có điện thoại! Cuộc gọi từ **Hưng Thỏ**. Bạn có muốn nghe không? Hãy nói: nghe, hoặc: không, sau tiếng bíp. Hoặc bấm phím bất kỳ ở cạnh máy để nghe."*
+   Số chưa lưu danh bạ thì đọc từng chữ số; số ẩn thì nói "số ẩn".
+3. Tiếng bíp → app nghe khoảng 7 giây.
+4. Nếu chưa trả lời: app phát **tiếng chuông của riêng app** khoảng 3 giây (vẫn kêu khi máy để im lặng), rồi hỏi ngắn: *"Bạn có muốn nghe máy không? Nói: nghe, để nghe."* – lặp lại cho tới khi người gọi cúp máy.
+
+Cách trả lời:
+
+| Muốn | Cách làm |
 |---|---|
-| Có cuộc gọi sim đến | Chuông máy reo trước **6 giây** (chỉnh được 0/3/6/10 giây), máy **rung liên tục**, rồi app nói *"Có điện thoại! Cuộc gọi từ …. Bạn có muốn nghe không?"* (tên trong danh bạ, hoặc đọc từng số). Nói **"nghe"** → nhấc máy và bật loa ngoài. Nói **"không"** → từ chối. **Bấm phím bất kỳ ở cạnh máy** (tăng/giảm âm lượng, nguồn) = **nghe máy** – Android giữ phím lúc đổ chuông và không cho biết phím nào, nên mọi phím đều là nghe. Trên màn hình phải **giữ** nút mới từ chối được. Trong lúc app chờ câu trả lời, chuông thật được tắt để không lọt vào micro; giữa các lần hỏi app tự phát tiếng chuông to (kể cả khi máy để im lặng). |
-| Có cuộc gọi Zalo / WhatsApp | Chuông Zalo/WhatsApp reo khoảng 3 giây rồi app mới hỏi (Zalo đổ chuông ngắn hơn cuộc gọi sim). Bấm phím bất kỳ ở cạnh máy cũng nghe máy. Còn lại như trên, dùng nút Trả lời/Từ chối trong thông báo của Zalo/WhatsApp; sau khi nghe máy, app tự bấm nút **Loa** (cần bật Trợ năng). Nếu không bấm được loa, app nói *"hãy áp máy lên tai"*. Vì chuông Zalo/WhatsApp không tắt được, lúc này app chỉ nhận **"nghe"**, "nghe máy", "bắt máy", "trả lời" (không nhận "có", "ừ", "vâng" – tiếng chuông hay bị nghe nhầm thành các từ này). |
-| Cuộc gọi nhỡ (sim, Zalo, WhatsApp) | Đọc to: *"Bạn vừa nhỡ cuộc gọi từ …"*, luôn kèm tên (danh bạ máy, sim, Zalo/WhatsApp) hoặc số điện thoại. Zalo báo lại cả cuộc gọi sim nhỡ của người đã kết bạn: app vẫn đọc đúng tên/số và nói là cuộc gọi sim. |
-| Tin nhắn Zalo, WhatsApp, SMS | Đọc to người gửi và nội dung. Tin nhóm mặc định chỉ lưu lại (riêng với tin cá nhân), không đọc to; nói **"tin nhóm"** để nghe. Đang gọi điện thì không đọc, lưu lại để nghe sau. Máy để im lặng **vẫn đọc**. **Giờ yên tĩnh** (22h–6h) **mặc định bật**: ban đêm không đọc to tin nhắn (vẫn báo cuộc gọi), hết giờ yên tĩnh app nhắc số tin mới một lần. |
-| **Giữ phím giảm âm lượng ~1,5 giây** (mọi hãng máy) hoặc nút nguồn (Samsung) | Máy rung nhẹ rồi mở chế độ nghe lệnh (xem bảng lệnh bên dưới). Bấm nhanh phím giảm âm lượng vẫn giảm âm lượng bình thường; khi app đang đọc (ví dụ đọc tin nhắn) thì bấm nhanh để **dừng đọc**. Màn hình đang tắt app vẫn thử nhận phím và tự bật sáng màn hình; nếu máy không rung thì bấm nút nguồn cho sáng rồi giữ lại. Cần bật Trợ năng – nếu Trợ năng bị tắt hoặc bị hệ thống ngắt, app **đọc to cảnh báo** ngay ở lần kiểm tra kế tiếp. |
-| Pin | Báo pin yếu (20%, 10%, 5%), cắm sạc, rút sạc, sạc đầy. |
+| Nghe máy | Nói **"nghe"** (hoặc "nghe máy", "bắt máy", "trả lời", "có", "vâng", "ừ") – hoặc **bấm phím bất kỳ ở cạnh máy** (tăng/giảm âm lượng, nguồn) – hoặc chạm **nửa trên màn hình** (nút NGHE màu xanh) |
+| Từ chối | Nói **"không"** (hoặc "không nghe", "từ chối", "tắt máy", "cúp máy") – hoặc **giữ lâu** nửa dưới màn hình (nút TỪ CHỐI màu đỏ) |
 
-### Lệnh giọng nói (sau khi giữ phím giảm âm lượng và nghe tiếng bíp)
+Nghe máy xong app tự **bật loa ngoài** và đưa **âm lượng cuộc gọi lên tối đa**.
 
-Mọi câu hỏi của app đều kết thúc bằng *"… sau tiếng bíp"*, rồi kêu một tiếng bíp to, dài khoảng 2 giây. Nói sau khi tiếng bíp tắt.
+> Vì sao mọi phím cạnh máy đều là "nghe": lúc cuộc gọi sim đổ chuông, Android giữ phím lại và chỉ báo cho app là "người dùng vừa bấm phím", không cho biết phím nào.
 
-- **"Gọi Mẹ"**, **"Gọi chị Trang"**, **"Gọi Hưng"** – gọi theo tên trong danh bạ, nói cả tên hoặc một phần tên (không cần đúng thứ tự, không phân biệt dấu). Đúng một người khớp: app hỏi *"Bạn muốn gọi cho …, đúng không?"*. Nhiều người khớp (tối đa 6): app đọc *"Số 1: …. Số 2: …"* rồi hỏi gọi ai – nói **số thứ tự** ("hai", "số hai", "người thứ hai") là gọi ngay; nói "hủy" để thôi. Nhiều hơn 6 người: app xin nói thêm tên.
-- **"Gọi"** kèm số điện thoại, ví dụ **"gọi không ba bốn năm…"** (có hoặc không có chữ "số"), nói liền một hơi hoặc ngập ngừng đều được. App đọc lại: *"Bạn muốn gọi số …, đúng không? Nói đúng để thực hiện cuộc gọi, nói không để hủy."*
-- Chỉ nói **"gọi"** rồi dừng: app hỏi gọi ai.
-- **"Gọi lại"** – gọi lại người vừa gọi đến / gọi nhỡ
-- **"Đọc tin nhắn"** – đọc các tin cá nhân chưa nghe (bấm nhanh phím giảm âm lượng để dừng)
-- **"Tin nhóm"** – đọc tối đa 10 tin nhóm mới nhất
-- **"Cuộc gọi nhỡ"** – đọc danh sách cuộc gọi nhỡ trong 24 giờ
-- **"Mấy giờ"**, **"Pin"**
-- **"Danh bạ"** – đọc tên trong danh bạ
-- **"To lên" / "Nhỏ xuống"** – chỉnh độ to giọng đọc
-- **"Nói chậm" / "Nói nhanh"** – chỉnh tốc độ đọc
-- **"Hướng dẫn"** – nghe lại danh sách lệnh
+### Cuộc gọi Zalo / WhatsApp
 
-Nghe lệnh dùng **bộ nhận dạng giọng nói Google** có sẵn trên máy (nghe tên người và chữ số chính xác hơn nhiều); khi mất mạng hoặc máy không có thì tự chuyển sang bộ nhận dạng offline (kém chính xác hơn). Câu hỏi "nghe hay không" khi có cuộc gọi đến vẫn dùng bộ offline.
+1. Chuông Zalo/WhatsApp reo khoảng **3 giây** (Zalo đổ chuông ngắn hơn sim), rồi app nói: *"Có điện thoại Zalo! Cuộc gọi từ …. Bạn có muốn nghe không? Hãy nói: nghe, hoặc: không, sau tiếng bíp."*
+2. Vì chuông Zalo/WhatsApp vẫn kêu (app không tắt được), app chỉ nhận **"nghe"**, "nghe máy", "bắt máy", "trả lời" để nghe máy (không nhận "có", "ừ", "vâng" – tiếng chuông hay bị nghe nhầm thành các từ này). Nói **"không"** để từ chối.
+3. **Phím cạnh máy không dùng được** để nghe cuộc gọi Zalo/WhatsApp (Android không chuyển phím cho app), nên app không nhắc cách này.
+4. Nghe máy xong, app tự bật **loa ngoài** bằng Trợ năng:
+   - chờ màn hình cuộc gọi Zalo/WhatsApp hiện ổn định và cuộc gọi đã kết nối, rồi chạm nút **Loa** một lần;
+   - nếu máy đang nối Bluetooth và Zalo hiện bảng chọn âm thanh, app chạm tiếp **"Loa ngoài"**;
+   - không bật được thì app nói *"Chưa bật được loa ngoài, hãy áp máy lên tai."* (trên Android 11 như A92, app còn kiểm tra lại được loa đã bật thật chưa).
 
-App nghe **trọn câu** (chờ bạn im lặng khoảng 1,5 giây) rồi mới xử lý, nên ngập ngừng giữa câu không sao. Từ đệm như "à", "ừ", "đi", "nhé", "ạ" được bỏ qua. Câu dài hơn lệnh quá 2 chữ (thường là tiếng TV) bị bỏ qua. Chữ app nghe được hiện trên màn hình (cho người hỗ trợ xem) và được ghi vào nhật ký trong Cài đặt Trợ Lý.
+### Cuộc gọi nhỡ
 
-Khi app hỏi lại *"Gọi cho …, phải không?"*: nói **"đúng"**, "đúng rồi", "phải", "vâng", "có", "gọi đi" để gọi; **"không"**, "sai", "thôi", "hủy" để hủy. Câu dài hoặc lẫn từ khác không được tính – im lặng thì app tự hủy.
+App đọc to *"Bạn vừa nhỡ cuộc gọi từ …"*, luôn kèm **tên** (danh bạ máy, sim, Zalo/WhatsApp) hoặc **số điện thoại**. Cuộc gọi Zalo/WhatsApp nhỡ thì nói *"…cuộc gọi Zalo từ …"*. Zalo còn báo lại cả cuộc gọi sim nhỡ của người đã kết bạn: app vẫn đọc đúng tên/số (lấy từ nhật ký cuộc gọi) và có thể báo vài lần – càng giúp người dùng nghe rõ ai gọi.
 
-## Tải APK
+---
 
-Mỗi lần có thay đổi trên nhánh `main`, GitHub Actions tự build và tạo một bản **Release** có file `TroLyNgheGoi-vX.Y.Z.apk`. Vào tab **Releases** của repo, tải file `.apk` mới nhất về điện thoại.
+## 2. Ra lệnh bằng giọng nói
 
-Các bản cập nhật đều được ký cùng một khóa (`keystore/release.jks`), nên cài bản mới đè lên bản cũ được mà **không mất cài đặt và quyền**. Đừng xóa hay đổi file khóa này.
+### Cách mở
 
-## Cài đặt trên máy Samsung (người sáng mắt làm một lần, khoảng 15 phút)
+- **Giữ phím GIẢM âm lượng khoảng 1,5 giây** (mọi hãng máy): máy rung nhẹ, app nói *"Mời nói lệnh sau tiếng bíp"*. Màn hình đang tắt app cũng tự bật sáng; nếu máy không rung thì bấm nút nguồn cho sáng rồi giữ lại.
+- Samsung có thêm: nhấn giữ hoặc nhấn đúp **nút nguồn** (xem phần cài đặt).
+- Bấm nhanh phím giảm âm lượng vẫn giảm âm lượng bình thường; **khi app đang đọc** (ví dụ đọc tin nhắn) thì bấm nhanh để **dừng đọc**.
 
-1. **Tắt tạm "Chặn tự động" (Auto Blocker)** nếu máy báo không cho cài: Cài đặt → Bảo mật và quyền riêng tư → Chặn tự động → Tắt. Cài xong có thể bật lại.
-2. Mở file APK để cài.
-3. Mở biểu tượng **"Cài đặt Trợ Lý"** (biểu tượng thứ hai của app). Bấm **"Sửa"** ở từng mục ❌ cho tới khi tất cả là ✅:
-   - Đặt làm **ứng dụng điện thoại mặc định** (bắt buộc để báo cuộc gọi sim)
-   - Cấp quyền micro, danh bạ, gọi điện, nhật ký cuộc gọi, thông báo
-   - Bật **quyền đọc thông báo** (đọc tin nhắn, báo cuộc gọi Zalo/WhatsApp)
-   - Bật **Hỗ trợ tiếp cận / Trợ năng** → "Trợ Lý Nghe Gọi" (bấm loa trong Zalo/WhatsApp)
-   - Nếu Samsung báo **"Cài đặt bị hạn chế"**: Cài đặt → Ứng dụng → Trợ Lý Nghe Gọi → bấm ⋮ góc trên → **"Cho phép cài đặt hạn chế"**, rồi bật lại quyền.
-   - Hiển thị trên ứng dụng khác, không giới hạn pin, hiện toàn màn hình khi khóa máy
-   - Tắt **"Tạm dừng hoạt động nếu không dùng"** (để Android không tự thu hồi quyền)
-   - **Giọng đọc tiếng Việt** và **"đã tải về máy"**: nếu ❌, cài/tải dữ liệu giọng tiếng Việt cho "Dịch vụ giọng nói của Google" (Speech Services by Google) để dùng offline. Nếu giọng đọc bị lỗi (ví dụ mất mạng mà giọng chưa tải về), app phát **3 tiếng tít ngắn** thay vì im lặng.
-   - Nếu màn hình hiện danh sách **"tên trong danh bạ KHÔNG gọi được bằng giọng nói"**: đổi các tên đó trong danh bạ sang chữ tiếng Việt đơn giản.
-4. Cài **nút nguồn** để mở lệnh giọng nói (chọn một trong hai):
-   - **Nhấn giữ nút nguồn** (khuyên dùng): Cài đặt → Tính năng nâng cao → Phím sườn → Nhấn và giữ → **Trợ lý kỹ thuật số** → chọn **Trợ Lý Nghe Gọi** (nằm trong mục "Ứng dụng khác"). Nếu máy hỏi, chọn đặt làm ứng dụng trợ lý mặc định.
-   - **Nhấn đúp nút nguồn**: Cài đặt → Tính năng nâng cao → Phím sườn → Nhấn hai lần → Mở ứng dụng → **Trợ Lý Nghe Gọi**.
-5. Pin: Cài đặt → Pin → Giới hạn sử dụng nền → **Ứng dụng không bao giờ ngủ** → thêm Trợ Lý Nghe Gọi, **Zalo**, **WhatsApp**. Đặt Pin của 3 app này là **"Không hạn chế"**.
-6. Trong "Cài đặt Trợ Lý": chọn **độ to giọng đọc** (mặc định mức 3 – rất to), rồi bấm **"Thử giọng đọc"**, **"Giả lập cuộc gọi đến"** và **"Thử nhận lệnh giọng nói"**. Nên kéo cả thanh **Nhạc chuông** lên tối đa trong Cài đặt → Âm thanh.
-7. Nhập danh bạ với tên dễ đọc (ví dụ "Mẹ", "Anh Hưng") – tên tiếng Việt thường được nhận dạng tốt hơn tên tiếng Anh hay biệt danh có ký hiệu.
+### Danh sách lệnh
 
-### Danh sách kiểm tra trước khi trao máy
+**Gọi điện**
 
-- [ ] Gọi sim đến khi **màn hình khóa** → nghe đọc tên, nói "nghe" → nhấc máy, loa ngoài bật
-- [ ] Gọi sim đến, nói "không" → từ chối
-- [ ] Gọi sim đến, bấm phím bất kỳ ở cạnh máy → nhấc máy
-- [ ] Gọi từ số **không có trong danh bạ** → đọc từng chữ số
-- [ ] Để nhỡ một cuộc gọi → nghe báo cuộc gọi nhỡ; bấm đúp nút nguồn, nói "gọi lại"
-- [ ] Gọi **Zalo** đến (màn hình khóa và mở khóa) → nói "nghe" → nhấc máy và bật loa
-- [ ] Gọi **WhatsApp** đến → như trên
-- [ ] Nhắn tin Zalo, WhatsApp, SMS → nghe đọc nội dung
-- [ ] Bấm đúp nút nguồn → "gọi Mẹ" → "đúng" → gọi đi, loa ngoài bật
-- [ ] **Khởi động lại máy** rồi lặp lại 1–2 mục trên (app không cần mở lại)
-- [ ] Vuốt tắt hết app ở đa nhiệm rồi thử lại
+| Nói | App làm |
+|---|---|
+| **"Gọi [tên]"** – ví dụ "gọi Mẹ", "gọi chị Trang", "gọi Hưng" | Gọi sim người trong danh bạ (xem cách tìm tên bên dưới) |
+| **"Gọi Zalo [tên]"**, **"Gọi WhatsApp [tên]"** | Gọi qua Zalo / WhatsApp, rồi tự bật loa ngoài |
+| **"Gọi số"** kèm số, ví dụ "gọi số không ba bốn năm…" | Gọi theo số điện thoại |
+| **"Gọi"** rồi dừng | App hỏi *"Bạn muốn gọi ai?"* |
+| **"Gọi lại"** | Gọi lại người vừa gọi đến / vừa gọi nhỡ |
+| **"Cuộc gọi nhỡ"**, "ai vừa gọi" | Đọc các cuộc gọi nhỡ trong 24 giờ |
 
-## Cài trên máy Oppo (ColorOS)
+**Tin nhắn**
+
+| Nói | App làm |
+|---|---|
+| **"Đọc tin nhắn"** | Đọc các tin cá nhân chưa nghe (Zalo, WhatsApp, SMS) |
+| **"Tin nhóm"** | Đọc tối đa 10 tin nhóm mới nhất |
+
+**Thông tin và chỉnh giọng**
+
+| Nói | App làm |
+|---|---|
+| **"Mấy giờ"**, "hôm nay thứ mấy", "ngày bao nhiêu" | Đọc giờ, thứ, ngày |
+| **"Pin"**, "còn bao nhiêu pin" | Đọc mức pin, có đang sạc không |
+| **"Danh bạ"** | Đọc tên trong danh bạ (tối đa 40 tên) |
+| **"To lên"** / **"Nhỏ xuống"** | Chỉnh độ to giọng đọc |
+| **"Nói chậm"** / **"Nói nhanh"** | Chỉnh tốc độ đọc |
+| **"Hướng dẫn"** | Đọc lại toàn bộ danh sách lệnh |
+| **"Thôi"**, "hủy", "không" | Đóng trợ lý |
+
+### Gọi theo tên
+
+- Nói **cả tên hoặc một phần tên**, không cần đúng thứ tự, **không phân biệt dấu** (danh bạ lưu "Hung Tho" vẫn gọi được khi nói "Hưng Thỏ"). Tuy vậy nên lưu danh bạ **có dấu** để giọng đọc đọc tên cho dễ nghe.
+- **Một người khớp:** app hỏi *"Bạn muốn gọi cho …, đúng không? Nói: đúng, để gọi. Nói: không, để hủy."*
+- **Nhiều người khớp (tối đa 6):** app đọc *"Có 3 người. Số 1: …. Số 2: …. Số 3: …. Bạn muốn gọi ai?"* – nói **số thứ tự** ("hai", "số hai", "người thứ hai") là **gọi ngay**; nói "hủy" để thôi. Hai người trùng hẳn tên thì đọc kèm 3 số cuối. Cùng một số điện thoại chỉ đọc một lần.
+- **Hơn 6 người khớp / không tìm thấy:** app xin nói thêm tên, hoặc nói lại.
+
+### Gọi theo số
+
+- Nên nói **"gọi số"** rồi đọc số – có chữ "số" bộ nhận dạng nghe số chuẩn hơn.
+- Số bắt đầu bằng 0 mà nghe **chưa đủ 10 số** (11 số với máy bàn), app nói *"Tôi mới nghe được 7 số: …. Số điện thoại cần 10 số. Hãy đọc lại cả số điện thoại."* Số ngắn như 113, 1900… gọi bình thường.
+- App đọc lại: *"Bạn muốn gọi số 0 3 4 5, 0 5 3, 0 0 3, đúng không? Nói: đúng, để thực hiện cuộc gọi. Nói: đọc lại, để đọc lại số. Nói: không, để hủy."*
+
+### Trả lời "đúng / không"
+
+- Đồng ý: **"đúng"**, "đúng rồi", "phải", "vâng", "có", "gọi đi" (kể cả khi bộ nhận dạng nghe thành "Đốm").
+- Từ chối: **"không"**, "sai", "thôi", "hủy".
+- Im lặng: app hỏi lại một lần rồi hủy.
+
+### Bộ nhận dạng giọng nói
+
+- Lệnh giọng nói dùng **bộ nhận dạng giọng nói của Google** có sẵn trên máy – nghe tên và số chính xác. Cần **mạng** (wifi/4G), hoặc máy đã có **gói tiếng Việt ngoại tuyến** của Google (trong ứng dụng Google → Cài đặt → Giọng nói). Khi mất mạng mà không có gói này, app tự dùng bộ nhận dạng offline dự phòng (kém chính xác hơn nhiều).
+- Câu hỏi "nghe hay không" khi có cuộc gọi đến luôn dùng bộ offline (không cần mạng).
+- Sau tiếng bíp, nếu người dùng chưa nói gì trong khoảng 5 giây, app bíp ngắn và **nghe thêm một lượt** (tổng khoảng 10 giây). Đã bắt đầu nói thì app chờ người dùng **im lặng khoảng 1,5 giây** mới coi là nói xong, nên nói chậm, ngập ngừng không sao.
+- Chữ app nghe được hiện trên màn hình (cho người hỗ trợ xem) và được ghi vào **nhật ký nhận dạng** (Cài đặt Trợ Lý → "Gửi nhật ký nhận dạng giọng nói").
+
+---
+
+## 3. Tin nhắn và thông báo khác
+
+- **Tin Zalo, WhatsApp, SMS:** đọc to người gửi và nội dung (lọc emoji, cắt tin quá dài). Tin thoại Zalo chỉ được báo "một tin nhắn thoại".
+- **Tin nhóm:** mặc định chỉ lưu lại (riêng với tin cá nhân), không đọc to; nói "tin nhóm" để nghe.
+- Đang gọi điện thì không đọc, lưu lại; gọi xong app nhắc số tin mới.
+- Máy để im lặng / rung **vẫn đọc** (người khiếm thị không nhìn thấy máy đang im lặng).
+- **Giờ yên tĩnh 22h–6h mặc định bật:** ban đêm không đọc tin nhắn (vẫn báo cuộc gọi); hết giờ yên tĩnh app nhắc số tin mới một lần.
+- **Pin:** báo pin yếu (20%, 10%, 5%), cắm sạc, rút sạc, sạc đầy.
+- **Cảnh báo:** nếu app mất quyền quan trọng, hoặc Trợ năng / dịch vụ đọc thông báo bị hệ thống ngắt, app **đọc to cảnh báo** (vấn đề mới báo ngay, vấn đề cũ nhắc lại mỗi 6 tiếng).
+
+---
+
+## 4. Tải và cài APK
+
+Vào tab **Releases** của repo, tải file `TroLyNgheGoi-vX.Y.Z.apk` mới nhất về điện thoại và mở để cài. Mỗi lần có thay đổi trên nhánh `main`, GitHub Actions tự build và tạo bản Release mới.
+
+Các bản đều ký cùng một khóa (`keystore/release.jks`), nên **cài bản mới đè lên bản cũ** được mà không mất cài đặt và quyền. Đừng xóa hay đổi file khóa này.
+
+App có 3 biểu tượng: **Trợ Lý Nghe Gọi** (mở lệnh giọng nói), **Cài đặt Trợ Lý** (cho người hỗ trợ), **Điện thoại** (bàn phím gọi cho người sáng mắt).
+
+---
+
+## 5. Cài đặt lần đầu (người hỗ trợ làm)
+
+### 5.1. Màn hình "Cài đặt Trợ Lý"
+
+Mở biểu tượng **Cài đặt Trợ Lý**, làm cho tới khi mọi mục ở phần 1 có dấu ✅ (bấm **"Sửa"** ở mục ❌):
+
+- **Là ứng dụng điện thoại mặc định** – bắt buộc để báo cuộc gọi sim.
+- Quyền **micro, danh bạ, gọi điện, nhật ký cuộc gọi, trạng thái điện thoại, hiện thông báo** – bấm "Cấp tất cả quyền cơ bản".
+- **Quyền đọc thông báo** – đọc tin nhắn, báo cuộc gọi Zalo/WhatsApp.
+- **Hỗ trợ tiếp cận / Trợ năng** → "Trợ Lý Nghe Gọi" – giữ phím giảm âm lượng để ra lệnh, tự bật loa Zalo/WhatsApp. Đường dẫn trên Samsung: Cài đặt → Hỗ trợ → Ứng dụng đã cài đặt → Trợ Lý Nghe Gọi. Nếu Samsung báo **"Cài đặt bị hạn chế"**: Thông tin ứng dụng → ⋮ → **"Cho phép cài đặt hạn chế"**, rồi bật lại.
+- **Hiển thị trên ứng dụng khác**, **không giới hạn pin**, **không tự thu hồi quyền**, **hiện màn hình cuộc gọi khi khóa máy**.
+- **Giọng đọc tiếng Việt** và **"đã tải về máy"** – nếu ❌, tải giọng tiếng Việt cho "Dịch vụ giọng nói của Google". Nếu giọng đọc lỗi, app phát **3 tiếng tít ngắn** thay vì im lặng.
+- **Nhận dạng giọng nói Google** – nếu ❌, cài/cập nhật ứng dụng Google từ CH Play.
+- **Bộ nhận dạng giọng nói offline** (dự phòng).
+
+Các phần khác trên màn hình:
+
+- **2. Thử nghiệm:** "Thử giọng đọc"; chọn **độ to** Mức 1–4 (nút đang chọn **màu xanh, có dấu ✓**; mặc định Mức 3); "Đọc chậm hơn / nhanh hơn" (hiện tốc độ mới); "Thử nhận lệnh giọng nói"; "Giả lập cuộc gọi đến"; "Gửi nhật ký nhận dạng giọng nói"; "Gửi thông tin màn hình Zalo (lỗi loa ngoài)".
+- **3. Tùy chọn:** hỏi "nghe không" bằng giọng nói; **đổ chuông trước khi đọc tên** (0/3/6/10 giây, bấm để đổi); **rung khi có cuộc gọi**; tự bật loa ngoài; âm lượng cuộc gọi tối đa; báo cuộc gọi Zalo/WhatsApp; đọc tin Zalo / WhatsApp / SMS / tin nhóm / nội dung tin; báo pin; giữ phím giảm âm lượng để mở lệnh; giờ yên tĩnh.
+- **4. Cách mở lệnh giọng nói** và **5. Cài đặt riêng theo hãng máy** (hướng dẫn hiện theo máy đang dùng).
+- **6. Tạm tắt hoặc gỡ Trợ Lý** – xem mục 7 bên dưới.
+
+### 5.2. Máy OPPO (ColorOS)
 
 ColorOS tắt app chạy nền rất mạnh. Làm cho **cả Trợ Lý Nghe Gọi, Zalo và WhatsApp**:
 
@@ -85,64 +165,117 @@ ColorOS tắt app chạy nền rất mạnh. Làm cho **cả Trợ Lý Nghe Gọ
 2. Cùng màn hình → **Mức sử dụng pin** → bật **Cho phép hoạt động nền**, tắt tối ưu hóa pin.
 3. Cùng màn hình → Quyền → bật **Hiển thị trên màn hình khóa**, **Cửa sổ bật lên / mở giao diện khi chạy nền**, **Hiển thị trên ứng dụng khác**.
 4. Mở danh sách app gần đây → **khóa** thẻ Trợ Lý Nghe Gọi.
-5. Nút nguồn của Oppo chỉ mở được Camera / Trợ lý Google, nên dùng **giữ phím giảm âm lượng** để mở lệnh giọng nói.
-6. Giọng đọc tiếng Việt: cần wifi một lần để tải giọng Google tiếng Việt (mục "Giọng đọc tiếng Việt" trong Cài đặt Trợ Lý).
+5. Nút nguồn của OPPO chỉ mở được Camera / Trợ lý Google, nên dùng **giữ phím giảm âm lượng** để mở lệnh giọng nói.
+6. Cần wifi một lần để tải giọng đọc tiếng Việt của Google. Nên thử **tắt mạng** rồi ra một lệnh: nếu nhật ký ghi **[Google]** là máy có gói nhận dạng tiếng Việt ngoại tuyến; ghi **[offline]** là đang dùng bộ dự phòng.
 
-## Người khác dùng máy để gọi (khách đến thăm, người hỗ trợ)
+### 5.3. Máy Samsung
 
-Khi Trợ Lý là ứng dụng điện thoại mặc định, app **Điện thoại của Samsung sẽ không cho gọi** (bấm "Lúc khác" là nó tự đóng). Thay vào đó dùng biểu tượng **"Điện thoại"** (nền xanh dương) của Trợ Lý:
+1. Nếu máy báo không cho cài: Cài đặt → Bảo mật và quyền riêng tư → **Chặn tự động** → Tắt (cài xong có thể bật lại).
+2. Nút nguồn mở lệnh (tùy chọn): Cài đặt → Tính năng nâng cao → Phím sườn → **Nhấn và giữ** → Trợ lý kỹ thuật số → **Trợ Lý Nghe Gọi**; hoặc **Nhấn hai lần** → Mở ứng dụng → Trợ Lý Nghe Gọi.
+3. Pin: Cài đặt → Pin → Giới hạn sử dụng nền → **Ứng dụng không bao giờ ngủ** → thêm Trợ Lý Nghe Gọi, Zalo, WhatsApp; đặt pin 3 app là **Không hạn chế**.
 
-- **Bàn phím**: bấm số → **GỌI**. Bên dưới số hiện tên nếu có trong danh bạ. Nút **Lưu số** để thêm vào danh bạ.
-- **Gần đây**: nhật ký cuộc gọi (gọi đến, gọi đi, gọi nhỡ). Nút **GỌI** để gọi lại; chạm vào dòng để đưa số lên bàn phím.
-- **Danh bạ**: ô tìm kiếm (gõ không dấu cũng được, ví dụ "nguyen"), nút **+ Thêm**.
-- Trong lúc gọi có nút **BÀN PHÍM** để bấm phím khi gọi tổng đài.
-- App **Danh bạ** của Samsung vẫn dùng bình thường; bấm gọi từ đó cuộc gọi vẫn đi.
-- Cuộc gọi nhỡ hiện thông báo trên thanh trạng thái; chạm vào để mở danh sách Gần đây.
+### 5.4. Danh bạ
 
-Nên **gỡ biểu tượng Điện thoại của Samsung khỏi màn hình chính** và đặt biểu tượng "Điện thoại" của Trợ Lý vào đúng chỗ đó, để khách cầm máy là thấy ngay.
+- Lưu tên **có dấu, dễ đọc** (ví dụ "Mẹ", "Anh Hưng", "Chị Trang").
+- Gọi Zalo/WhatsApp bằng giọng nói dùng dòng **"Gọi Zalo" / "Gọi thoại WhatsApp"** mà Zalo/WhatsApp tự đồng bộ vào danh bạ máy, nên người đó cần có trong danh bạ máy với đúng số đăng ký Zalo/WhatsApp.
+- Một số ứng dụng đồng hồ thông minh (ví dụ "Call Bridge") tự tạo danh bạ giả tên "Zalo …" với số ảo – các mục này không gọi được; máy không cài các ứng dụng đó thì không gặp.
 
-## Độ to
+---
 
-- Giọng đọc phát qua thanh âm lượng **"Chuông báo"**. App tự đặt thanh này về mức đã chọn (mặc định 100%) trước mỗi lần đọc, nên lỡ kéo nhỏ cũng không sao.
-- Ngoài ra app **khuếch đại giọng đọc bằng phần mềm** (chuẩn hóa + nén động), đo trên giọng tiếng Việt: mức 2 / 3 / 4 to hơn khoảng +4 / +6 / +8 dB. Mức 4 có thể hơi rè.
-- Lệnh **"to lên"**: tăng âm lượng tới 100% rồi tăng mức khuếch đại. **"Nhỏ xuống"**: ngược lại.
-- Khi nghe máy, app đưa **âm lượng cuộc gọi lên tối đa** (sim và Zalo/WhatsApp).
-- Loa điện thoại có giới hạn vật lý. Nếu người dùng nghe rất kém, nên dùng thêm loa Bluetooth hoặc tai nghe/máy trợ thính Bluetooth.
+## 6. Danh sách kiểm tra trước khi trao máy
 
-## App có cần luôn mở không?
+Làm trên **chính chiếc máy sẽ trao**, với giọng người dùng thật:
 
-Không. App không chạy như app thường mà dựa vào 3 dịch vụ do Android quản lý:
+**Cuộc gọi đến**
+- [ ] Gọi sim đến khi **màn hình khóa**: chuông reo ~6 giây, máy rung, nghe đọc tên; nói "nghe" → nhấc máy, loa ngoài bật
+- [ ] Gọi sim đến, nói "không" → từ chối
+- [ ] Gọi sim đến, **bấm phím bất kỳ ở cạnh máy** → nhấc máy
+- [ ] Gọi sim đến, im lặng → nghe tiếng chuông của app và câu hỏi ngắn lặp lại
+- [ ] Gọi từ số **không có trong danh bạ** → đọc từng chữ số
+- [ ] Để nhỡ một cuộc gọi sim → nghe báo cuộc gọi nhỡ kèm tên/số; giữ phím giảm âm lượng, nói "gọi lại"
+- [ ] Gọi **Zalo** đến (màn hình khóa và mở khóa) → nói "nghe" → nhấc máy, **loa ngoài bật**
+- [ ] Gọi **WhatsApp** đến → như trên
 
-- **Ứng dụng điện thoại mặc định**: Android tự đánh thức app mỗi khi có cuộc gọi sim.
-- **Quyền đọc thông báo** và **Trợ năng**: Android giữ chạy thường trực và tự bật lại nếu bị tắt.
+**Gọi đi**
+- [ ] "Gọi [tên]" → "đúng" → gọi đi, loa ngoài bật
+- [ ] "Gọi [một phần tên trùng nhiều người]" → nghe danh sách → nói số thứ tự → gọi đi
+- [ ] "Gọi số …" đọc đủ 10 số → "đúng" → gọi đi; thử nói "đọc lại"
+- [ ] "Gọi Zalo [tên]", "Gọi WhatsApp [tên]" → mở cuộc gọi Zalo/WhatsApp, loa ngoài bật
 
-Ngoài ra app có "người gác" chạy khoảng 15 phút một lần và sau khi bật máy, để xin kết nối lại dịch vụ nếu bị Samsung ngắt và **đọc to cảnh báo** nếu mất quyền quan trọng hoặc Trợ năng / dịch vụ đọc thông báo bị ngắt (vấn đề mới báo ngay, vấn đề cũ nhắc lại mỗi 6 tiếng). Vuốt tắt app, "Đóng tất cả", khởi động lại máy đều không ảnh hưởng. Chỉ cần **không bấm "Buộc dừng"** trong Cài đặt → Ứng dụng.
+**Khác**
+- [ ] Nhắn tin Zalo, WhatsApp, SMS → nghe đọc nội dung; "đọc tin nhắn"; bấm nhanh phím giảm âm lượng để dừng
+- [ ] **Khởi động lại máy** rồi lặp lại 1–2 mục trên (không mở app)
+- [ ] Vuốt xóa hết app ở đa nhiệm, bấm dọn dẹp → giữ phím giảm âm lượng vẫn mở lệnh; Trợ năng vẫn ✅
+- [ ] Để máy qua đêm, màn tắt → sáng ra gọi sim và Zalo đến vẫn được báo
+- [ ] Người dùng tự làm một mình: mở lệnh, gọi một người, nghe tin nhắn, nghe một cuộc gọi đến
 
-## Giới hạn đã biết
+---
 
-- Bật loa trong Zalo/WhatsApp dựa vào việc tìm nút "Loa" trên màn hình cuộc gọi. Nếu Zalo/WhatsApp đổi giao diện sau một lần cập nhật, có thể không bật được loa (app vẫn nghe máy được và sẽ nói "hãy áp máy lên tai"). Có thể tắt tự cập nhật Zalo/WhatsApp trong Play Store.
+## 7. Tạm tắt, bật lại, gỡ ứng dụng
+
+Ở **cuối trang** Cài đặt Trợ Lý (mục 6):
+
+- **"Tạm tắt hết"** (nút đỏ, có hỏi xác nhận): app ngừng mọi việc – không đọc tên người gọi, không đọc tin nhắn, không nghe lệnh, không bật loa, không báo pin; **tự tắt Trợ năng** (phím giảm âm lượng trở lại bình thường); trả lại âm lượng; ngừng "người gác". Sau đó máy mở màn hình **chọn ứng dụng mặc định**: chạm **"Ứng dụng điện thoại"** rồi chọn ứng dụng **Điện thoại gốc** của máy (Android bắt buộc người dùng tự chọn). Trong lúc chưa chọn lại, app vẫn hiện màn hình cuộc gọi bình thường để máy không bao giờ mất cuộc gọi. Đầu trang Cài đặt hiện dòng đỏ "Trợ Lý đang TẠM TẮT".
+- **"Bật lại Trợ Lý"** (nút xanh, cùng chỗ): bật lại mọi tính năng. Android bắt buộc người dùng tự bật lại **Trợ năng** và chọn lại Trợ Lý làm **ứng dụng điện thoại** – bấm "Sửa" ở các mục ❌ đầu trang.
+- **"Gỡ hẳn ứng dụng – trả máy như cũ"** (nút đỏ, có hỏi xác nhận): máy trở về như chưa cài – Android tự trả lại ứng dụng Điện thoại gốc, tự xóa mọi quyền và Trợ năng của app. Sau khi gỡ, nên gọi thử một cuộc vào máy để kiểm tra.
+
+---
+
+## 8. Người khác dùng máy để gọi (khách, người hỗ trợ)
+
+Khi Trợ Lý là ứng dụng điện thoại mặc định, app Điện thoại gốc của máy có thể không cho gọi. Dùng biểu tượng **"Điện thoại"** (nền xanh dương) của Trợ Lý:
+
+- **Bàn phím:** bấm số → **GỌI**; dưới số hiện tên nếu có trong danh bạ; nút **Lưu số**.
+- **Gần đây:** nhật ký cuộc gọi; nút **GỌI** để gọi lại.
+- **Danh bạ:** ô tìm kiếm (gõ không dấu cũng được), nút **+ Thêm**.
+- Trong lúc gọi có nút **BÀN PHÍM** (bấm phím khi gọi tổng đài); nút **kết thúc phải giữ lâu** để tránh chạm nhầm.
+- App Danh bạ của máy vẫn dùng bình thường.
+
+Nên đặt biểu tượng "Điện thoại" của Trợ Lý vào chỗ biểu tượng Điện thoại gốc trên màn hình chính.
+
+---
+
+## 9. Độ to
+
+- Giọng đọc phát qua thanh âm lượng **"Chuông báo"**. App đặt thanh này về mức đã chọn (mặc định 100%) trong lúc đọc, đọc xong **trả lại mức cũ** (báo thức đồng hồ không bị to lên).
+- App **khuếch đại giọng đọc bằng phần mềm**: Mức 2 / 3 / 4 to hơn khoảng +4 / +6 / +8 dB. Mức 4 có thể hơi rè.
+- Lệnh **"to lên"**: tăng âm lượng tới 100% rồi tăng mức khuếch đại; **"nhỏ xuống"**: ngược lại.
+- Khi nghe máy, app đưa **âm lượng cuộc gọi lên tối đa**.
+- Người nghe rất kém nên dùng thêm loa hoặc tai nghe Bluetooth (khi có tai nghe, app không bật loa ngoài).
+
+---
+
+## 10. App có cần luôn mở không?
+
+Không. App dựa vào các dịch vụ do Android quản lý: **ứng dụng điện thoại mặc định** (Android đánh thức app khi có cuộc gọi sim), **quyền đọc thông báo** và **Trợ năng** (Android giữ chạy thường trực). Ngoài ra có "người gác" chạy khoảng 15 phút một lần và sau khi bật máy để kết nối lại dịch vụ và cảnh báo khi mất quyền. Vuốt tắt app, "Đóng tất cả", khởi động lại máy đều không ảnh hưởng. **Không bấm "Buộc dừng"** app trong Cài đặt → Ứng dụng.
+
+---
+
+## 11. Giới hạn đã biết
+
+- **Phím cạnh máy** chỉ nghe được **cuộc gọi sim**, không nghe được cuộc gọi Zalo/WhatsApp.
+- **Bật loa Zalo/WhatsApp** dựa vào việc chạm nút "Loa" trên màn hình cuộc gọi. Nếu Zalo/WhatsApp đổi giao diện sau khi cập nhật, có thể không bật được loa (app vẫn nghe máy được và nói "hãy áp máy lên tai"). Có thể tắt tự cập nhật Zalo/WhatsApp trong CH Play. Trên Android 12 trở lên, app không kiểm tra lại được loa đã bật thật hay chưa.
+- **Lệnh giọng nói cần mạng** (hoặc gói tiếng Việt ngoại tuyến của Google). Bộ nhận dạng dự phòng khi mất mạng nghe tên và số kém.
 - Khi đang trong một cuộc gọi mà có cuộc gọi chờ, app chỉ đọc tên người gọi (micro đang bận).
-- Nhận dạng giọng nói offline chỉ hiểu các lệnh cố định và tên có trong danh bạ, không hiểu câu tự do.
-- Khi máy để chế độ rung/im lặng: app **vẫn đọc tên người gọi và tin nhắn** (người khiếm thị không nhìn thấy máy đang im lặng). Giờ yên tĩnh ban đêm mặc định bật; có thể tắt trong Cài đặt Trợ Lý.
-- Âm lượng "Chuông báo" chỉ được kéo lên trong lúc app đang đọc, đọc xong trả lại mức cũ (báo thức đồng hồ không bị to lên).
-- Nhận dạng giọng nói chỉ chấp nhận câu ngắn gồm toàn từ của một lệnh ("nghe", "nghe máy", "không", "từ chối"...), cả ở câu hỏi nghe máy, bước xác nhận "đúng/không" và lệnh giọng nói. Tiếng ồn, tiếng TV, người xung quanh nói chuyện bị bỏ qua.
-- Tin nhắn thoại Zalo chỉ được báo "một tin nhắn thoại", chưa nghe được nội dung. Chưa gọi Zalo/WhatsApp đi bằng giọng nói được (chỉ gọi sim).
+- Tin nhắn thoại Zalo chỉ được báo, chưa nghe được nội dung.
+- Danh bạ giả do ứng dụng đồng hồ thông minh (ví dụ "Call Bridge") tạo ra không gọi được.
 
-## Cấu trúc code
+---
+
+## 12. Dành cho người phát triển
 
 ```
 app/src/main/java/vn/blindsupport/app/
-├── App.kt, Watchdog.kt          Khởi động, "người gác", nhận sự kiện bật máy
-├── core/                        Giọng đọc (TTS), nhận dạng giọng nói (Vosk), âm lượng, danh bạ, cài đặt
-├── call/                        Ứng dụng điện thoại mặc định: InCallService, màn hình cuộc gọi
-├── voip/                        Cuộc gọi Zalo / WhatsApp
-├── notify/                      Đọc thông báo: tin nhắn, cuộc gọi Zalo, pin
-├── a11y/                        Trợ năng: bấm nút Loa/Trả lời trong Zalo, WhatsApp
-└── ui/                          Màn hình lệnh giọng nói, cài đặt, bàn phím gọi
+├── App.kt, Watchdog.kt     Khởi động, "người gác", nhận sự kiện bật máy
+├── core/                   Giọng đọc (Speaker), nhận dạng giọng nói (SpeechInput: Google + Vosk dự phòng),
+│                           hỏi "nghe không" (VoiceCallPrompt), âm lượng, loa, danh bạ, cài đặt, công tắc tổng (AppControl)
+├── call/                   Ứng dụng điện thoại mặc định: InCallService, màn hình cuộc gọi
+├── voip/                   Cuộc gọi Zalo / WhatsApp
+├── notify/                 Đọc thông báo: tin nhắn, cuộc gọi Zalo/WhatsApp, cuộc gọi nhỡ, pin
+├── a11y/                   Trợ năng: giữ phím giảm âm lượng, bấm/chạm nút Loa, Trả lời trong Zalo/WhatsApp
+└── ui/                     Lệnh giọng nói (Commands, VoiceCommandActivity), Cài đặt Trợ Lý, bàn phím gọi
 ```
 
-Model nhận dạng giọng nói tiếng Việt (`vosk-model-small-vn-0.4`, khoảng 32MB) được tự tải về khi build lần đầu, không lưu trong repo.
-
-### Build trên máy tính
-
-Mở thư mục repo bằng Android Studio rồi chọn **Build → Build APK(s)**, hoặc chạy `./gradlew assembleRelease`. File APK nằm ở `app/build/outputs/apk/release/`.
+- Model nhận dạng offline `vosk-model-small-vn-0.4` (khoảng 32 MB) tự tải về khi build lần đầu, không lưu trong repo.
+- Build: mở repo bằng Android Studio → **Build → Build APK(s)**, hoặc `./gradlew assembleRelease` (APK ở `app/build/outputs/apk/release/`). Kiểm thử: `./gradlew testReleaseUnitTest`.
+- Đẩy lên nhánh `ci-check` để GitHub Actions chỉ build + kiểm thử, không tạo bản phát hành.

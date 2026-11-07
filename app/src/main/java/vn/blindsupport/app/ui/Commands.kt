@@ -313,6 +313,6 @@ object CommandParser {
             "Cuộc gọi nhỡ. Mấy giờ. Pin. " +
             "Danh bạ, để nghe tên trong danh bạ. To lên, hoặc nhỏ xuống, để chỉnh âm lượng giọng đọc. " +
             "Nói chậm, hoặc nói nhanh. Khi có cuộc gọi đến, nói: nghe, hoặc: không. " +
-            "Hoặc bấm phím bất kỳ ở cạnh máy để nghe máy. " +
+            "Với cuộc gọi sim, bạn cũng có thể bấm phím bất kỳ ở cạnh máy để nghe máy. " +
             "Khi đang đọc tin nhắn, bấm phím giảm âm lượng để dừng đọc."
 }

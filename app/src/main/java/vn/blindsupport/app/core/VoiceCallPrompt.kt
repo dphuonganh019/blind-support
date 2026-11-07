@@ -85,7 +85,6 @@ class VoiceCallPrompt(
     suspend fun run() {
         // Kể cả khi máy để im lặng / rung vẫn đọc tên người gọi: người khiếm thị có thể đã
         // vô tình gạt sang im lặng mà không biết. Giọng đọc đi qua luồng "Chuông báo" nên vẫn kêu.
-        val kind = if (appName != null) "cuộc gọi $appName" else "cuộc gọi"
         var ringerSilenced = false
         // Giữ micro bằng dịch vụ tiền cảnh trong lúc hỏi, để nghe được câu trả lời kể cả khi
         // ColorOS không cho màn hình cuộc gọi bật lên. Không bật được thì vẫn chạy như cũ.
@@ -110,11 +109,14 @@ class VoiceCallPrompt(
             while (isRinging() && round < 12) {
                 if (!ringerSilenced) RingVolumeGuard.lower(context)
                 val attention = if (appName != null) "Có điện thoại $appName! " else "Có điện thoại! "
+                // Phím cạnh máy chỉ nghe được cuộc gọi sim (với Zalo/WhatsApp, Android không chuyển phím cho app).
+                val keyHint = if (appName == null) " Hoặc bấm phím bất kỳ ở cạnh máy để nghe." else ""
                 val sentence = when {
                     !Prefs.voiceAnswer -> "${attention}Cuộc gọi từ $callerLabel."
                     round == 0 -> "${attention}Cuộc gọi từ $callerLabel. Bạn có muốn nghe không? " +
-                        "Hãy nói: nghe, hoặc: không, sau tiếng bíp. Hoặc bấm phím bất kỳ ở cạnh máy để nghe."
-                    else -> "${attention}Vẫn đang có $kind từ $callerLabel. Hãy nói: nghe, hoặc: không, sau tiếng bíp."
+                        "Hãy nói: nghe, hoặc: không, sau tiếng bíp.$keyHint"
+                    // Các lần sau: thật ngắn, kẻo người gọi cúp máy trước khi kịp trả lời.
+                    else -> "Bạn có muốn nghe máy không? Nói: nghe, để nghe."
                 }
                 Speaker.speak(sentence)
                 if (!isRinging()) return

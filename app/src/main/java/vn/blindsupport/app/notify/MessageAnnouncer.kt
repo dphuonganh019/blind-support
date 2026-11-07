@@ -36,6 +36,7 @@ object MessageAnnouncer {
         val app = context.applicationContext
         App.appScope.launch {
             for (item in queue) {
+                if (!Prefs.appEnabled) continue
                 when (item) {
                     is Item.Msg -> {
                         if (isBusy(app)) {

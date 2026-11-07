@@ -55,6 +55,11 @@ class VoiceCommandActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!Prefs.appEnabled) {
+            android.widget.Toast.makeText(this, "Trợ Lý đang tạm tắt. Mở Cài đặt Trợ Lý để bật lại.", android.widget.Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
         BigUi.showOverLockScreen(this)
         VoiceRecognizer.preload(applicationContext, lifecycleScope)
         val root = BigUi.column(this)

@@ -61,8 +61,16 @@ object VoipCallController {
         enableSpeaker(context.applicationContext, pkg, outgoing = true)
     }
 
+    /** Vừa nghe máy Zalo/WhatsApp: Zalo hay đăng lại thông báo "cuộc gọi đến" một lần nữa ngay sau đó. */
+    @Volatile private var answeredPkg: String? = null
+    @Volatile private var answeredAt = 0L
+
     fun onIncoming(context: Context, info: VoipCallInfo) {
+        if (!Prefs.appEnabled) return
         if (isRecentOutgoing(info.pkg)) return
+        // Thông báo "cuộc gọi đến" của chính cuộc gọi vừa nghe: bỏ qua, kẻo bật lại màn hình trợ lý
+        // và hỏi lại (làm màn hình nhảy qua lại, chạm hụt nút Loa).
+        if (info.pkg == answeredPkg && System.currentTimeMillis() - answeredAt < 30_000L) return
         val existing = current
         if (existing != null && existing.key == info.key && _state.value == State.RINGING) {
             // Thông báo được cập nhật: giữ nút mới nhất.
@@ -118,6 +126,8 @@ object VoipCallController {
 
     fun answer(context: Context) {
         val info = current ?: return
+        answeredPkg = info.pkg
+        answeredAt = System.currentTimeMillis()
         stopPrompt()
         _state.value = State.ANSWERED
         val sent = info.answer?.let { send(context, it) } ?: false
@@ -162,7 +172,17 @@ object VoipCallController {
             }
         }
         // Cách 2: nhờ trợ năng bấm nút "Loa" trên màn hình cuộc gọi của Zalo.
-        UiClicker.arm(context, pkg, UiClicker.SPEAKER_KEYS, 12_000) { ok ->
+        // Gọi đi phải chờ bên kia nghe máy nên cho lâu hơn.
+        UiClicker.arm(context, pkg, UiClicker.SPEAKER_KEYS, if (outgoing) 45_000 else 15_000) { ok ->
+            if (ok && Build.VERSION.SDK_INT < 31) {
+                // Android 11 trở xuống kiểm tra lại được: chạm rồi mà loa vẫn chưa bật thì báo.
+                App.appScope.launch {
+                    delay(1_500)
+                    if (!CallSpeaker.isSpeakerActive(context)) {
+                        Speaker.speak("Chưa bật được loa ngoài, hãy áp máy lên tai.")
+                    }
+                }
+            }
             if (!ok) {
                 App.appScope.launch {
                     routeJob.join()
@@ -194,6 +214,9 @@ object VoipCallController {
     /** Cuộc gọi Zalo/WhatsApp đã kết thúc. */
     fun onCallEnded(context: Context) {
         ongoingIntent = null
+        // Cuộc gọi đã xong: cuộc gọi đến tiếp theo (kể cả ngay sau đó) phải được báo bình thường.
+        answeredPkg = null
+        answeredAt = 0L
         CallSpeaker.release(context)
     }
 

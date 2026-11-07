@@ -3,7 +3,11 @@ package vn.blindsupport.app.ui
 import android.Manifest
 import android.app.role.RoleManager
 import android.content.ComponentName
+import android.app.AlertDialog
 import android.content.Intent
+import vn.blindsupport.app.core.AppControl
+import android.content.res.ColorStateList
+import android.widget.Toast
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
@@ -46,6 +50,23 @@ class SetupActivity : ComponentActivity() {
      * Liệt kê tên danh bạ có chữ mà bộ nhận dạng giọng nói không biết (ví dụ tên tiếng Anh):
      * những người này không gọi được bằng giọng nói. Người hỗ trợ nên đổi tên trong danh bạ.
      */
+    private val levelButtons = HashMap<Int, Button>()
+
+    /** Nút mức đang chọn: màu xanh, có dấu ✓. */
+    private fun renderLevelButtons() {
+        for ((level, title) in LEVELS) {
+            val b = levelButtons[level] ?: continue
+            val active = Prefs.voiceVolume == 100 && Prefs.boostLevel == level
+            b.text = if (active) "✓ $title" else title
+            b.backgroundTintList = if (active) ColorStateList.valueOf(GREEN) else null
+            b.setTextColor(Color.WHITE)
+        }
+    }
+
+    private fun toast(text: String) {
+        Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
+    }
+
     private fun ringFirstLabel(): String =
         "Đổ chuông trước khi đọc tên người gọi: ${Prefs.ringFirstSeconds} giây (bấm để đổi)"
 
@@ -102,6 +123,15 @@ class SetupActivity : ComponentActivity() {
 
         col.addView(heading("Cài đặt Trợ Lý Nghe Gọi"))
         col.addView(note("Phiên bản ${versionName()}. Màn hình này dành cho người hỗ trợ. Hãy làm cho tới khi tất cả các mục đều có dấu ✅."))
+        offBanner = TextView(this).apply {
+            text = "⚠️ Trợ Lý đang TẠM TẮT: không đọc, không hỏi, không bấm gì. Kéo xuống cuối trang, bấm \"Bật lại Trợ Lý\" để dùng lại."
+            setTextColor(Color.WHITE)
+            setBackgroundColor(RED)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
+            val p = dp(12)
+            setPadding(p, p, p, p)
+        }
+        col.addView(offBanner)
 
         col.addView(heading("1. Quyền và trạng thái"))
         checks = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -128,27 +158,29 @@ class SetupActivity : ComponentActivity() {
             "Giọng đọc dùng thanh âm lượng \"Chuông báo\". App tự đặt lại thanh này trước mỗi lần đọc, " +
                 "rồi khuếch đại thêm bằng phần mềm. Mức 3 hợp với người nghe kém; mức 4 to nhất nhưng có thể hơi rè."
         ))
-        for ((level, title) in listOf(
-            1 to "Mức 1 – bình thường",
-            2 to "Mức 2 – to",
-            3 to "Mức 3 – rất to (khuyên dùng)",
-            4 to "Mức 4 – to nhất",
-        )) {
-            col.addView(button(title) {
+        for ((level, title) in LEVELS) {
+            val b = button(title) {
                 Prefs.voiceVolume = 100
                 Prefs.boostLevel = level
                 renderLoudness()
+                renderLevelButtons()
+                toast("Đã chọn: $title")
                 lifecycleScope.launch { Speaker.speak("Mức $level. Có cuộc gọi từ Mẹ. Bạn có muốn nghe không?") }
-            })
+            }
+            levelButtons[level] = b
+            col.addView(b)
         }
+        renderLevelButtons()
         col.addView(button("Đọc chậm hơn") {
             Prefs.speechRate = (Prefs.speechRate - 0.1f).coerceAtLeast(0.5f)
             renderLoudness()
+            toast("Đã đổi tốc độ đọc: ${"%.2f".format(Prefs.speechRate)}")
             lifecycleScope.launch { Speaker.speak("Tôi sẽ đọc với tốc độ này.") }
         })
         col.addView(button("Đọc nhanh hơn") {
             Prefs.speechRate = (Prefs.speechRate + 0.1f).coerceAtMost(1.8f)
             renderLoudness()
+            toast("Đã đổi tốc độ đọc: ${"%.2f".format(Prefs.speechRate)}")
             lifecycleScope.launch { Speaker.speak("Tôi sẽ đọc với tốc độ này.") }
         })
         renderLoudness()
@@ -191,6 +223,7 @@ class SetupActivity : ComponentActivity() {
             val next = options[(options.indexOf(Prefs.ringFirstSeconds).coerceAtLeast(0) + 1) % options.size]
             Prefs.ringFirstSeconds = next
             ringButton.text = ringFirstLabel()
+            toast("Đổ chuông ${next} giây trước khi đọc tên")
         }
         col.addView(ringButton)
         col.addView(toggle("Rung liên tục khi có cuộc gọi đến", Prefs.vibrateOnCall) { Prefs.vibrateOnCall = it })
@@ -220,11 +253,93 @@ class SetupActivity : ComponentActivity() {
             open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
         })
         col.addView(button("Mở Cài đặt máy") { open(Intent(Settings.ACTION_SETTINGS)) })
+
+        col.addView(heading("6. Tạm tắt hoặc gỡ Trợ Lý"))
+        col.addView(note(
+            "Dùng khi app không chạy đúng hoặc làm người dùng khó chịu.\n" +
+                "• Tạm tắt hết: app ngừng mọi việc, tự tắt Trợ năng, trả lại âm lượng. Sau đó máy mở màn hình " +
+                "chọn ứng dụng điện thoại mặc định: chạm \"Ứng dụng điện thoại\" rồi chọn ứng dụng Điện thoại gốc của máy. " +
+                "Có thể bật lại bất cứ lúc nào.\n" +
+                "• Gỡ hẳn ứng dụng: máy trở về như chưa cài; Android tự trả lại ứng dụng Điện thoại gốc. " +
+                "Sau khi gỡ, nên gọi thử một cuộc vào máy để kiểm tra."
+        ))
+        switchButton = button("") { onSwitchPressed() }
+        col.addView(switchButton)
+        col.addView(button("Gỡ hẳn ứng dụng – trả máy như cũ") { confirmUninstall() }.apply {
+            backgroundTintList = ColorStateList.valueOf(RED)
+            setTextColor(Color.WHITE)
+        })
+        renderSwitch()
     }
 
     override fun onResume() {
         super.onResume()
         renderChecks()
+        renderSwitch()
+    }
+
+    private lateinit var offBanner: TextView
+    private lateinit var switchButton: Button
+
+    /** Nút đỏ "Tạm tắt hết" khi đang bật; nút xanh "Bật lại Trợ Lý" khi đang tắt. */
+    private fun renderSwitch() {
+        if (!::switchButton.isInitialized) return
+        val on = Prefs.appEnabled
+        switchButton.text = if (on) "Tạm tắt hết" else "Bật lại Trợ Lý"
+        switchButton.backgroundTintList = ColorStateList.valueOf(if (on) RED else GREEN)
+        switchButton.setTextColor(Color.WHITE)
+        offBanner.visibility = if (on) View.GONE else View.VISIBLE
+    }
+
+    private fun onSwitchPressed() {
+        if (Prefs.appEnabled) {
+            AlertDialog.Builder(this)
+                .setTitle("Tạm tắt hết Trợ Lý?")
+                .setMessage(
+                    "App sẽ ngừng đọc tên người gọi, đọc tin nhắn, nghe lệnh giọng nói và tự tắt Trợ năng.\n\n" +
+                        "Bước tiếp theo: máy mở màn hình chọn ứng dụng mặc định. Hãy chạm \"Ứng dụng điện thoại\" " +
+                        "rồi chọn ứng dụng Điện thoại gốc của máy."
+                )
+                .setPositiveButton("Tạm tắt") { _, _ ->
+                    AppControl.disableAll(this)
+                    renderSwitch()
+                    renderChecks()
+                    toast("Đã tạm tắt Trợ Lý")
+                    if (!open(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))) open(Intent(Settings.ACTION_SETTINGS))
+                }
+                .setNegativeButton("Không", null)
+                .show()
+        } else {
+            AppControl.enableAll(this)
+            renderSwitch()
+            renderChecks()
+            AlertDialog.Builder(this)
+                .setTitle("Đã bật lại Trợ Lý")
+                .setMessage(
+                    "Android bắt buộc người dùng tự làm lại 2 việc: bật Trợ năng cho Trợ Lý Nghe Gọi, và chọn " +
+                        "Trợ Lý làm ứng dụng điện thoại mặc định. Hãy bấm \"Sửa\" ở các mục có dấu ❌ ở đầu trang."
+                )
+                .setPositiveButton("OK", null)
+                .show()
+        }
+    }
+
+    private fun confirmUninstall() {
+        AlertDialog.Builder(this)
+            .setTitle("Gỡ hẳn Trợ Lý Nghe Gọi?")
+            .setMessage(
+                "Máy sẽ trở về như chưa cài: Android tự trả lại ứng dụng Điện thoại gốc, tự xóa mọi quyền và Trợ năng " +
+                    "của app. Sau khi gỡ, hãy gọi thử một cuộc vào máy để kiểm tra."
+            )
+            .setPositiveButton("Gỡ") { _, _ ->
+                AppControl.disableAll(this)
+                val uri = Uri.fromParts("package", packageName, null)
+                if (!open(Intent(Intent.ACTION_DELETE, uri))) {
+                    open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, uri))
+                }
+            }
+            .setNegativeButton("Không", null)
+            .show()
     }
 
     private fun renderChecks() {
@@ -380,9 +495,18 @@ class SetupActivity : ComponentActivity() {
     }.getOrNull() ?: "?"
 
     companion object {
+        private val LEVELS = listOf(
+            1 to "Mức 1 – bình thường",
+            2 to "Mức 2 – to",
+            3 to "Mức 3 – rất to (khuyên dùng)",
+            4 to "Mức 4 – to nhất",
+        )
+        private const val GREEN = 0xFF2E7D32.toInt()
+        private const val RED = 0xFFC62828.toInt()
+
         private val TRIGGER_GUIDE = """
-            • Mọi máy: GIỮ phím GIẢM âm lượng khoảng 2 giây (máy rung nhẹ) → nghe "Mời nói lệnh sau tiếng bíp". Bấm nhanh vẫn giảm âm lượng bình thường. Cần bật Hỗ trợ tiếp cận cho Trợ Lý ở mục 1.
-            • Màn hình đang tắt: bấm nút nguồn một lần cho sáng màn hình rồi mới giữ phím giảm âm lượng.
+            • Mọi máy: GIỮ phím GIẢM âm lượng khoảng 1,5 giây (máy rung nhẹ) → nghe "Mời nói lệnh sau tiếng bíp". Bấm nhanh vẫn giảm âm lượng bình thường. Cần bật Hỗ trợ tiếp cận cho Trợ Lý ở mục 1.
+            • Màn hình đang tắt: app vẫn thử nhận phím và tự bật sáng màn hình; nếu máy không rung thì bấm nút nguồn cho sáng rồi giữ lại.
             • Samsung có thêm cách: Cài đặt → Tính năng nâng cao → Phím sườn → Nhấn và giữ → Trợ lý kỹ thuật số → Trợ Lý Nghe Gọi.
         """.trimIndent()
 

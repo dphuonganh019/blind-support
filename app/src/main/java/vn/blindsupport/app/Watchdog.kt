@@ -41,6 +41,8 @@ object Watchdog {
     private const val WARN_INTERVAL = 6 * 3600_000L
 
     fun schedule(context: Context) {
+        Prefs.init(context)
+        if (!Prefs.appEnabled) return
         val js = context.getSystemService(JobScheduler::class.java) ?: return
         if (js.getPendingJob(JOB_ID) != null) return
         val job = JobInfo.Builder(JOB_ID, ComponentName(context, WatchdogJob::class.java))
@@ -50,8 +52,14 @@ object Watchdog {
         runCatching { js.schedule(job) }
     }
 
+    /** "Tạm tắt hết": ngừng người gác. */
+    fun cancel(context: Context) {
+        runCatching { context.getSystemService(JobScheduler::class.java)?.cancel(JOB_ID) }
+    }
+
     fun check(context: Context) {
         Prefs.init(context)
+        if (!Prefs.appEnabled) return
         RingVolumeGuard.restoreIfStale(context)
         if (HealthCheck.isNotificationListenerEnabled(context) && !BlindNotificationListener.connected) {
             runCatching {

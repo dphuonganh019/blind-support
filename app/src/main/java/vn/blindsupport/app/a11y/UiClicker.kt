@@ -19,12 +19,21 @@ object UiClicker {
     class Task(
         val pkg: String,
         val keywords: List<String>,
-        val deadline: Long,
+        @Volatile var deadline: Long,
         val onDone: (Boolean) -> Unit,
     ) {
         @Volatile var finished = false
         /** Đã xin mở lại màn hình của ứng dụng (khi không thấy cửa sổ nào của nó). */
         @Volatile var screenRequested = false
+
+        // ---- Chỉ dùng cho nút Loa ----
+        /** Lúc thấy màn hình cuộc gọi của ứng dụng (0 = chưa thấy). */
+        @Volatile var windowSeenAt = 0L
+        /** Vị trí nút Loa ở lần quét trước: chỉ chạm khi nút đã đứng yên (màn hình hết chuyển cảnh). */
+        @Volatile var lastBounds: android.graphics.Rect? = null
+        /** Đã chạm nút Loa; đang chờ xem Zalo có hiện bảng chọn "Loa ngoài / Tai nghe / Bluetooth" không. */
+        @Volatile var tappedBounds: android.graphics.Rect? = null
+        @Volatile var popupUntil = 0L
     }
 
     @Volatile var pending: Task? = null

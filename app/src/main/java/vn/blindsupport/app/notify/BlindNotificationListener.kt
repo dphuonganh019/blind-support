@@ -69,6 +69,7 @@ class BlindNotificationListener : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         if (sbn.packageName == packageName) return
+        if (!Prefs.appEnabled) return
         try {
             handlePosted(sbn)
         } catch (e: Exception) {
@@ -160,7 +161,7 @@ class BlindNotificationListener : NotificationListenerService() {
 
     private val batteryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (!Prefs.announceBattery) return
+            if (!Prefs.appEnabled || !Prefs.announceBattery) return
             val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
             val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
             if (level < 0) return

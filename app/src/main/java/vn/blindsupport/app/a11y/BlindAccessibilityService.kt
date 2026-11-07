@@ -68,6 +68,7 @@ class BlindAccessibilityService : AccessibilityService() {
     private var answeredByKey = false
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
+        if (!Prefs.appEnabled) return false
         val volumeKey = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
         // Đang có cuộc gọi đến đổ chuông: phím âm lượng bất kỳ = nghe máy.
         if (volumeKey) {
@@ -179,19 +180,12 @@ class BlindAccessibilityService : AccessibilityService() {
             return
         }
         val speakerTask = task.keywords === UiClicker.SPEAKER_KEYS
-        // Âm thanh đã ra loa ngoài rồi: không chạm vào nút Loa nữa (chạm sẽ TẮT loa).
-        // Chỉ tin được trên Android 11 trở xuống; Android 12+ trả lời theo yêu cầu của chính app.
-        if (speakerTask && android.os.Build.VERSION.SDK_INT < 31 && CallSpeaker.isSpeakerActive(this)) {
-            UiClicker.finish(task, true)
-            return
-        }
         val roots = mutableListOf<AccessibilityNodeInfo>()
         runCatching { windows }.getOrNull()?.forEach { w -> w.root?.let { roots += it } }
         rootInActiveWindow?.let { roots += it }
-        // Màn hình cuộc gọi của Zalo/WhatsApp không hiện (máy khóa, đang mở app khác): mở nó lên một lần.
-        if (speakerTask && roots.none { it.packageName?.toString() == task.pkg } && !task.screenRequested) {
-            task.screenRequested = true
-            VoipCallController.bringCallScreen(this)
+        if (speakerTask) {
+            runSpeakerTask(task, roots)
+            return
         }
         for (root in roots) {
             if (root.packageName?.toString() != task.pkg) continue
@@ -206,6 +200,128 @@ class BlindAccessibilityService : AccessibilityService() {
     }
 
     private enum class Result { CLICKED, ALREADY_ON, NOT_FOUND }
+
+    /**
+     * Bật loa ngoài trong cuộc gọi Zalo/WhatsApp, từng bước cho chắc:
+     *  1. Màn hình cuộc gọi của ứng dụng phải đang hiện (không thì mở nó lên) và đã hiện ít nhất 1,5 giây.
+     *  2. Cuộc gọi đã kết nối (có thông báo "đang trong cuộc gọi" hoặc đồng hồ đếm giờ trên màn hình).
+     *  3. Nút Loa đứng yên ở cùng một chỗ qua 2 lần quét (màn hình hết chuyển cảnh) rồi mới chạm, MỘT lần.
+     *  4. Trong 3 giây sau đó, nếu ứng dụng hiện bảng chọn (khi máy có Bluetooth) thì chạm "Loa ngoài".
+     */
+    private fun runSpeakerTask(task: UiClicker.Task, roots: List<AccessibilityNodeInfo>) {
+        val now = System.currentTimeMillis()
+        val appRoots = roots.filter { it.packageName?.toString() == task.pkg }
+
+        // Bước 4: chờ bảng chọn sau khi đã chạm nút Loa.
+        val tapped = task.tappedBounds
+        if (tapped != null) {
+            if (now > task.popupUntil) {
+                UiClicker.finish(task, true)
+                return
+            }
+            for (root in appRoots) {
+                val option = findPopupSpeakerOption(root, tapped) ?: continue
+                val target = clickableAncestor(option) ?: clickableSibling(option)
+                val ok = (target != null && target.isEnabled && target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) ||
+                    tapCenter(option)
+                if (ok) {
+                    UiClicker.finish(task, true)
+                    return
+                }
+            }
+            return
+        }
+
+        // Android 11 trở xuống hỏi được âm thanh đã ra loa ngoài chưa: rồi thì không chạm (chạm sẽ TẮT loa).
+        if (android.os.Build.VERSION.SDK_INT < 31 && CallSpeaker.isSpeakerActive(this)) {
+            UiClicker.finish(task, true)
+            return
+        }
+        // Bước 1.
+        if (appRoots.isEmpty()) {
+            task.windowSeenAt = 0L
+            task.lastBounds = null
+            if (!task.screenRequested) {
+                task.screenRequested = true
+                VoipCallController.bringCallScreen(this)
+            }
+            return
+        }
+        if (task.windowSeenAt == 0L) task.windowSeenAt = now
+        if (now - task.windowSeenAt < 1_500L) return
+        // Bước 2.
+        val connected = vn.blindsupport.app.notify.BlindNotificationListener.voipCallInProgress ||
+            appRoots.any { hasCallTimer(it) }
+        if (!connected) return
+        // Bước 3.
+        val normKeys = UiClicker.SPEAKER_KEYS.map { " " + TextUtils.normalize(it) + " " }
+        val node = appRoots.firstNotNullOfOrNull { findFirst(it) { n -> matches(n, normKeys) } } ?: return
+        if ((node.isCheckable && node.isChecked) || node.isSelected) {
+            UiClicker.finish(task, true)
+            return
+        }
+        val l = label(node)
+        if (l.contains(" tắt loa ") || l.contains(" speaker on ")) {
+            UiClicker.finish(task, true)
+            return
+        }
+        val r = android.graphics.Rect()
+        node.getBoundsInScreen(r)
+        if (r.isEmpty || task.lastBounds != r) {
+            task.lastBounds = r
+            return
+        }
+        val target = clickableAncestor(node) ?: clickableSibling(node)
+        val ok = (target != null && target.isEnabled && target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) ||
+            tapCenter(node)
+        if (!ok) return
+        task.tappedBounds = r
+        task.popupUntil = now + 3_000L
+        task.deadline = maxOf(task.deadline, task.popupUntil + 1_000L)
+    }
+
+    /** Có đồng hồ đếm giờ cuộc gọi ("00:05") trên màn hình: cuộc gọi đã kết nối. */
+    private fun hasCallTimer(root: AccessibilityNodeInfo): Boolean = findFirst(root) { n ->
+        n.className?.toString()?.contains("Chronometer") == true ||
+            Regex("^\\d{1,2}:\\d{2}(:\\d{2})?$").matches(n.text?.toString()?.trim().orEmpty())
+    } != null
+
+    /** Mục "Loa ngoài" trong bảng chọn âm thanh, nằm ngoài vùng nút Loa vừa chạm. */
+    private fun findPopupSpeakerOption(root: AccessibilityNodeInfo, tapped: android.graphics.Rect): AccessibilityNodeInfo? {
+        val keys = listOf(" loa ngoài ", " speaker ", " speakerphone ", " loa ")
+        return findFirst(root) { n ->
+            val l = label(n)
+            if (keys.none { l.contains(it) }) return@findFirst false
+            if (l.contains(" tai nghe ") || l.contains(" bluetooth ") || l.contains(" headset ")) return@findFirst false
+            if (l.contains("speakerbtn")) return@findFirst false
+            val b = android.graphics.Rect()
+            n.getBoundsInScreen(b)
+            if (b.isEmpty || android.graphics.Rect.intersects(b, tapped)) return@findFirst false
+            // Không chọn lại chính nút Loa trên màn hình cuộc gọi.
+            var p: AccessibilityNodeInfo? = n.parent
+            var depth = 0
+            while (p != null && depth < 6) {
+                if (p.viewIdResourceName?.lowercase()?.contains("speakerbtn") == true) return@findFirst false
+                p = p.parent
+                depth++
+            }
+            true
+        }
+    }
+
+    /** Duyệt cây giao diện theo chiều rộng, trả về nút đầu tiên thỏa [test]. */
+    private fun findFirst(root: AccessibilityNodeInfo, test: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo? {
+        val queue = ArrayDeque<AccessibilityNodeInfo>()
+        queue.add(root)
+        var visited = 0
+        while (queue.isNotEmpty() && visited < 800) {
+            val node = queue.removeFirst()
+            visited++
+            if (runCatching { test(node) }.getOrDefault(false)) return node
+            for (i in 0 until node.childCount) node.getChild(i)?.let { queue.add(it) }
+        }
+        return null
+    }
 
     /**
      * [allowTap]: nút không nhận lệnh "bấm" của trợ năng (Zalo tự xử lý cú chạm) thì chạm giả lập

@@ -18,6 +18,14 @@ object Prefs {
     private fun bool(key: String, def: Boolean) = sp.getBoolean(key, def)
     private fun setBool(key: String, v: Boolean) = sp.edit().putBoolean(key, v).apply()
 
+    /**
+     * Công tắc tổng. false = "Tạm tắt hết": app không đọc, không hỏi, không bấm gì; nếu vẫn đang là
+     * ứng dụng điện thoại mặc định thì chỉ hiện màn hình cuộc gọi bình thường để máy vẫn nghe gọi được.
+     */
+    var appEnabled: Boolean
+        get() = bool("app_enabled", true)
+        set(v) = setBool("app_enabled", v)
+
     // Tin nhắn
     var readZalo: Boolean
         get() = bool("read_zalo", true)
