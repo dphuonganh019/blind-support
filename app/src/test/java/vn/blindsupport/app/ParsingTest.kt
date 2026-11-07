@@ -51,6 +51,9 @@ class ParsingTest {
         for (t in listOf("đúng", "đúng rồi", "Đúng rồi", "phải", "vâng", "ừ", "có", "gọi đi", "đúng đúng rồi")) {
             assertEquals(t, Confirm.YES, Confirm.parse(t))
         }
+        // Google hay nghe "đúng" thành "Đốm".
+        assertEquals(Confirm.YES, Confirm.parse("Đốm"))
+        assertEquals(Confirm.YES, Confirm.parse("đốm."))
         for (t in listOf("không", "sai", "không phải", "thôi", "hủy", "không gọi", "phải không")) {
             assertEquals(t, Confirm.NO, Confirm.parse(t))
         }

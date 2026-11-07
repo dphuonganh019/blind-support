@@ -53,7 +53,11 @@ enum class Confirm { YES, NO;
 
     companion object {
         /** Không còn từ "gọi" đứng một mình: đó là từ rất hay gặp trong câu nói thường và tiếng TV. */
-        val YES_WORDS = listOf("đúng", "đúng rồi", "phải", "phải rồi", "vâng", "ừ", "có", "gọi đi", "ok")
+        val YES_WORDS = listOf(
+            "đúng", "đúng rồi", "phải", "phải rồi", "vâng", "ừ", "có", "gọi đi", "ok",
+            // Bộ nhận dạng Google hay nghe "đúng" thành các chữ này (đã gặp trên máy thật).
+            "đốm", "đúm", "đùng", "đung",
+        )
         val NO_WORDS = listOf("không", "sai", "không phải", "thôi", "hủy", "không gọi")
 
         /**

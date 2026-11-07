@@ -43,6 +43,8 @@ class VoiceCommandActivity : ComponentActivity() {
     private companion object {
         /** Tin nhóm thường rất nhiều: mỗi lần chỉ đọc tối đa chừng này tin gần nhất. */
         const val MAX_GROUP_READ = 10
+        /** Gợi ý cho bộ nhận dạng Google khi hỏi "đúng không" (Android 13+): nghe "đúng" chuẩn hơn. */
+        val CONFIRM_HINTS = listOf("đúng", "đúng rồi", "không", "vâng", "có")
     }
 
     private lateinit var statusView: TextView
@@ -401,7 +403,7 @@ class VoiceCommandActivity : ComponentActivity() {
                 else "Hãy nói: đúng, hoặc: không, sau tiếng bíp."
             )
             Beeper.beep()
-            val ans = hear(Confirm.PHRASES, hints = emptyList())
+            val ans = hear(Confirm.PHRASES, hints = CONFIRM_HINTS)
             val answer = ans.firstNotNullOfOrNull { Confirm.parse(it) }
             logHeard(ans, answer != null)
             when (answer) {
@@ -445,7 +447,7 @@ class VoiceCommandActivity : ComponentActivity() {
                 else "Số $spoken. Hãy nói: đúng, hoặc: không, sau tiếng bíp."
             )
             Beeper.beep()
-            val ans = hear(Confirm.PHRASES, hints = emptyList())
+            val ans = hear(Confirm.PHRASES, hints = CONFIRM_HINTS)
             val answer = ans.firstNotNullOfOrNull { Confirm.parse(it) }
             logHeard(ans, answer != null)
             when (answer) {
