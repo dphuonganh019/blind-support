@@ -1,6 +1,5 @@
 package vn.blindsupport.app.ui
 
-import vn.blindsupport.app.core.CallIntent
 import vn.blindsupport.app.core.Contact
 import vn.blindsupport.app.core.DigitWords
 import vn.blindsupport.app.core.TextUtils
@@ -17,8 +16,17 @@ object VoiceSession {
 }
 
 sealed class Command {
+    /** Tìm được đúng một người trong danh bạ. */
     data class CallContact(val contact: Contact) : Command()
-    /** "Gọi số ..." – [digits] là phần số đã đọc kèm trong câu lệnh (có thể rỗng). */
+    /** Nhiều người khớp phần tên đã nói: đọc danh sách có số thứ tự cho người dùng chọn. */
+    data class ChooseContact(val spoken: String, val candidates: List<Contact>) : Command()
+    /** Quá nhiều người khớp (ví dụ chỉ nói "anh"): cần nói thêm tên. */
+    data class TooManyContacts(val spoken: String, val count: Int) : Command()
+    /** Nói tên nhưng không có ai trong danh bạ khớp. */
+    data class ContactNotFound(val spoken: String) : Command()
+    /** Chỉ nói "gọi": hỏi gọi ai. */
+    object CallWho : Command()
+    /** "Gọi" + số điện thoại – [digits] là phần số đã đọc kèm trong câu lệnh (có thể rỗng). */
     data class CallNumber(val digits: String) : Command()
     object CallBack : Command()
     object ReadMessages : Command()
@@ -44,10 +52,15 @@ enum class Confirm { YES, NO;
         val NO_WORDS = listOf("không", "sai", "không phải", "thôi", "hủy", "không gọi")
 
         /**
-         * Danh sách nghe gồm cả từ "mồi": tiếng ồn, tiếng TV, tiếng người xung quanh bị nhận thành
-         * các từ này thay vì thành "đúng".
+         * Vài từ "mồi" khác âm hẳn với "đúng"/"không": tiếng ồn, tiếng TV bị nhận thành các từ này
+         * thay vì thành "đúng". Chỉ dùng ít từ, tránh các từ gần âm (đó, đi, được...) để không làm
+         * lời nói thật bị nghe sai.
          */
-        val PHRASES: List<String> = (YES_WORDS + NO_WORDS + CallIntent.FILLER_WORDS).distinct()
+        private val DECOYS = listOf(
+            "à", "ờ", "ừm", "hả", "gì", "này", "nào", "ai", "ăn", "về", "làm", "người", "nhà",
+            "ở", "ra", "vào", "biết", "thấy", "nói", "tiếng", "chuông",
+        )
+        val PHRASES: List<String> = (YES_WORDS + NO_WORDS + DECOYS).distinct()
 
         private val YES_SET = YES_WORDS.flatMap { TextUtils.words(it) }.toSet()
         private val NO_SET = NO_WORDS.flatMap { TextUtils.words(it) }.toSet()
@@ -64,6 +77,32 @@ enum class Confirm { YES, NO;
             if (words.all { it in NO_SET } && NO_WORDS.any { t.contains(" $it ") }) return NO
             if (words.all { it in YES_SET } && YES_WORDS.any { t.contains(" $it ") }) return YES
             return null
+        }
+    }
+}
+
+/** Chọn một người trong danh sách đã đọc bằng số thứ tự ("hai", "số hai", "người thứ hai"). */
+sealed class Choice {
+    data class Pick(val index: Int) : Choice()
+    object Cancel : Choice()
+
+    companion object {
+        private val SKIP = setOf("số", "thứ", "người", "tự", "gọi", "à", "ạ", "nhé", "đi")
+        private val CANCEL = setOf("hủy", "thôi", "không")
+
+        fun phrases(): List<String> =
+            DigitWords.WORDS + listOf("số", "thứ", "người thứ", "số thứ tự", "nhất", "hủy", "thôi", "không gọi")
+
+        /** [count]: số người trong danh sách. Trả về null nếu không nghe ra lựa chọn hợp lệ. */
+        fun parse(text: String, count: Int): Choice? {
+            val all = TextUtils.words(text)
+            if (all.isEmpty() || all.size > 4) return null
+            val words = all.filter { it !in SKIP }
+            // "không" đứng một mình (hoặc "không gọi", "thôi") là hủy, không phải số 0.
+            if (words.isNotEmpty() && words.all { it in CANCEL || it == "ai" }) return Cancel
+            if (words.size != 1) return null
+            val n = if (words[0] == "nhất") 1 else DigitWords.toDigits(words[0]).singleOrNull()?.digitToInt()
+            return if (n != null && n in 1..count) Pick(n - 1) else null
         }
     }
 }
@@ -91,32 +130,48 @@ object CommandParser {
         Command.Cancel to listOf("thôi", "hủy", "không", "không có gì", "tạm biệt"),
     )
 
+    /** Danh sách chọn tối đa chừng này người; nhiều hơn thì hỏi nói thêm tên. */
+    const val MAX_CHOICES = 6
+
     /** Từ đệm hay nói ở đầu câu ("à, gọi mẹ") – được bỏ đi trước khi so khớp. */
     private val LEADING = setOf("à", "ờ", "ừ", "ừm", "này", "ơi", "thì")
     /** Từ đệm hay nói ở cuối câu ("gọi mẹ đi", "đọc tin nhắn nhé") – được bỏ đi trước khi so khớp. */
     private val TRAILING = setOf("đi", "nhé", "nha", "ạ", "à", "ơi", "với", "nhỉ", "giúp", "giùm", "cái")
+    /** Hư từ không mang nghĩa lệnh, được bỏ ở bất kỳ đâu trong câu ("đọc tin nhắn à nhé"). */
+    private val PARTICLES = setOf("à", "ạ", "ờ", "ừm", "ơi", "nhé", "nha", "nhỉ", "hả")
+    /** Các chữ có thể đứng sau "gọi" trước tên hoặc số: "gọi điện cho", "gọi đến số"... */
+    private val CALL_HEAD = setOf("gọi", "điện", "cho", "đến", "tới", "số", "bấm")
 
+    /**
+     * Danh sách cụm cho bộ nhận dạng. Bộ nhận dạng cho phép nối các cụm với nhau, nên chỉ cần
+     * liệt kê từng chữ của tên danh bạ và từng chữ số – người dùng nói một phần tên hay đọc
+     * số điện thoại dài bao nhiêu cũng nghe được.
+     *
+     * KHÔNG đưa "từ mồi" (ăn, nam, mô, người...) vào đây: chúng làm tên và chữ số bị nghe nhầm
+     * (ví dụ "năm" thành "nam"), khiến lệnh gọi không dùng được.
+     */
     fun phrases(contacts: List<Contact>): List<String> {
         val list = FIXED.values.flatten().toMutableList()
-        // "gọi số" kèm chữ số: bộ nhận dạng cho phép nối các cụm, nên liệt kê từng chữ số riêng.
-        list += listOf("gọi số", "gọi đến số", "bấm số")
+        list += listOf("gọi", "gọi cho", "gọi điện", "gọi điện cho", "gọi số", "gọi đến số", "bấm số", "số")
         list += DigitWords.WORDS
-        for (c in contacts) {
-            list += "gọi ${c.normalizedName}"
-            list += "gọi cho ${c.normalizedName}"
-        }
-        // Từ mồi: tiếng TV, tiếng người xung quanh bị nhận thành các từ này thay vì thành một lệnh.
-        list += CallIntent.FILLER_WORDS
+        list += namePhrases(contacts)
         list += LEADING + TRAILING
         return list.distinct()
     }
 
-    /** Hư từ không mang nghĩa lệnh, được bỏ ở bất kỳ đâu trong câu ("đọc tin nhắn à nhé"). */
-    private val PARTICLES = setOf("à", "ạ", "ờ", "ừm", "ơi", "nhé", "nha", "nhỉ", "hả")
+    /** Tên danh bạ (đầy đủ và từng chữ), để nghe khi hỏi "gọi ai". */
+    fun namePhrases(contacts: List<Contact>): List<String> {
+        val list = ArrayList<String>()
+        for (c in contacts) {
+            if (c.normalizedName.isBlank()) continue
+            list += c.normalizedName
+            list += TextUtils.words(c.normalizedName)
+        }
+        return list.distinct()
+    }
 
     /**
      * Bỏ từ đệm ở hai đầu câu, và tối đa 2 hư từ ở giữa câu. Không bao giờ bỏ hết cả câu.
-     * Giới hạn 2 để câu dài của TV/người xung quanh vẫn không lọt qua.
      */
     fun stripFillers(words: List<String>): List<String> {
         var w = words
@@ -127,50 +182,96 @@ object CommandParser {
         return w
     }
 
-    /**
-     * Chỉ nhận khi CẢ CÂU (sau khi bỏ từ đệm ở hai đầu) đúng là một lệnh. Câu dài chỉ "có chứa"
-     * một cụm lệnh (thường là tiếng TV, người xung quanh nói chuyện) bị bỏ qua.
-     */
     fun parse(text: String, contacts: List<Contact>): Command? {
         val words = stripFillers(TextUtils.words(text))
         if (words.isEmpty()) return null
         val t = words.joinToString(" ")
-        for (prefix in listOf("gọi đến số", "gọi số", "bấm số")) {
-            if (t == prefix || t.startsWith("$prefix ")) {
-                val rest = TextUtils.words(t.removePrefix(prefix))
-                // Phần sau "gọi số" phải toàn là chữ số; lẫn từ khác thì không nhận.
-                if (rest.any { w -> DigitWords.toDigits(w).isEmpty() }) return null
-                return Command.CallNumber(DigitWords.toDigits(rest.joinToString(" ")))
-            }
-        }
+
+        if (t == "gọi lại" || (t.startsWith("gọi lại ") && words.size <= 5)) return Command.CallBack
+        if (words.first() == "gọi" || t.startsWith("bấm số")) return parseCall(words, contacts)
+
+        // Lệnh cố định: khớp đúng cả câu, hoặc câu chứa cụm lệnh và chỉ dài hơn tối đa 2 chữ.
+        // (Câu dài hơn thường là tiếng TV / người xung quanh nói chuyện.)
         for ((cmd, list) in FIXED) {
             if (list.any { it == t }) return cmd
         }
-        if (t.startsWith("gọi ")) {
-            val rest = t.removePrefix("gọi ").let { if (it.startsWith("cho ")) it.removePrefix("cho ") else it }.trim()
-            return matchContact(rest, contacts)?.let { Command.CallContact(it) }
+        var best: Pair<Command, Int>? = null
+        for ((cmd, list) in FIXED) {
+            for (p in list) {
+                val pw = p.split(' ').size
+                if (words.size <= pw + 2 && " $t ".contains(" $p ")) {
+                    if (best == null || p.length > best.second) best = cmd to p.length
+                }
+            }
         }
-        return null
+        return best?.first
+    }
+
+    /** "gọi …": phân biệt gọi theo số điện thoại hay theo tên danh bạ. */
+    private fun parseCall(words: List<String>, contacts: List<Contact>): Command {
+        var rest = words
+        var saidNumber = false
+        while (rest.isNotEmpty() && rest.first() in CALL_HEAD) {
+            if (rest.first() == "số") saidNumber = true
+            rest = rest.drop(1)
+        }
+        if (rest.isEmpty()) return if (saidNumber) Command.CallNumber("") else Command.CallWho
+
+        val digitWords = rest.filter { DigitWords.toDigits(it).isNotEmpty() }
+        val nonDigit = rest.size - digitWords.size
+        // Số điện thoại: toàn chữ số (cho phép lẫn 1 chữ nghe nhầm nếu đã đọc từ 3 số trở lên).
+        if ((digitWords.size >= 3 && nonDigit <= 1) || (saidNumber && nonDigit == 0)) {
+            return Command.CallNumber(DigitWords.toDigits(digitWords.joinToString(" ")))
+        }
+        if (rest == listOf("không")) return Command.Cancel
+
+        val spoken = rest.joinToString(" ")
+        val found = findContacts(rest, contacts)
+        return when {
+            found.isEmpty() -> Command.ContactNotFound(spoken)
+            found.size == 1 -> Command.CallContact(found[0])
+            found.size > MAX_CHOICES -> Command.TooManyContacts(spoken, found.size)
+            else -> Command.ChooseContact(spoken, found)
+        }
     }
 
     /**
-     * Tìm người trong danh bạ theo phần tên đã nói. Nhận khi nói đúng cả tên, hoặc nói một phần
-     * tên (ví dụ "Hưng" cho "Anh Hưng") mà không bị nhầm với người khác.
+     * Tìm người trong danh bạ theo phần tên đã nói (không phân biệt dấu, không cần đúng thứ tự):
+     *  1. Người có tên chứa TẤT CẢ các chữ đã nói. Nếu đúng một người có tên trùng hẳn câu nói
+     *     thì chọn luôn người đó.
+     *  2. Không ai chứa đủ: lấy những người chứa NHIỀU chữ nhất (ví dụ nói "chị Trang" mà danh bạ
+     *     lưu "Trang Nguyễn").
      */
-    fun matchContact(spoken: String, contacts: List<Contact>): Contact? {
-        if (spoken.isBlank()) return null
-        contacts.firstOrNull { it.normalizedName == spoken }?.let { return it }
-        val partial = contacts.filter { " ${it.normalizedName} ".contains(" $spoken ") }
-        return partial.singleOrNull()
+    fun findContacts(spokenWords: List<String>, contacts: List<Contact>): List<Contact> {
+        val spoken = spokenWords.map { TextUtils.fold(it) }.filter { it.isNotEmpty() }
+        if (spoken.isEmpty()) return emptyList()
+        val folded = contacts.map { it to TextUtils.words(it.normalizedName).map { w -> TextUtils.fold(w) } }
+            .filter { it.second.isNotEmpty() }
+
+        val exact = folded.filter { it.second == spoken }
+        if (exact.size == 1) return listOf(exact[0].first)
+
+        val all = folded.filter { (_, nameWords) -> spoken.all { it in nameWords } }
+        if (all.isNotEmpty()) return sortCandidates(all.map { it.first }, spoken)
+
+        val scored = folded.map { (c, nameWords) -> c to spoken.count { it in nameWords } }.filter { it.second > 0 }
+        val top = scored.maxOfOrNull { it.second } ?: return emptyList()
+        return sortCandidates(scored.filter { it.second == top }.map { it.first }, spoken)
     }
+
+    /** Tên ngắn hơn (khớp sát hơn) lên trước, rồi theo thứ tự chữ cái. */
+    private fun sortCandidates(list: List<Contact>, spoken: List<String>): List<Contact> =
+        list.distinctBy { it.number.filter(Char::isDigit) + "|" + it.normalizedName }
+            .sortedWith(compareBy<Contact>({ TextUtils.words(it.normalizedName).size - spoken.size }, { it.normalizedName }))
 
     fun isYes(text: String): Boolean = Confirm.parse(text) == Confirm.YES
 
     fun isNo(text: String): Boolean = Confirm.parse(text) == Confirm.NO
 
     const val HELP =
-        "Các lệnh bạn có thể nói: Gọi, kèm tên trong danh bạ, ví dụ: gọi Mẹ. " +
-            "Gọi số, rồi đọc từng số điện thoại. " +
+        "Các lệnh bạn có thể nói: Gọi, kèm tên trong danh bạ, ví dụ: gọi Mẹ. Có thể nói một phần tên; " +
+            "nếu nhiều người trùng tên, tôi sẽ đọc danh sách để bạn chọn bằng số thứ tự. " +
+            "Gọi, kèm số điện thoại, ví dụ: gọi không chín một hai. " +
             "Gọi lại, để gọi lại người vừa gọi. Đọc tin nhắn. Tin nhóm, để nghe tin nhắn nhóm. " +
             "Cuộc gọi nhỡ. Mấy giờ. Pin. " +
             "Danh bạ, để nghe tên trong danh bạ. To lên, hoặc nhỏ xuống, để chỉnh âm lượng giọng đọc. " +

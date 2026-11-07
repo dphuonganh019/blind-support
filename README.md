@@ -17,8 +17,9 @@ App Android giúp người khiếm thị nghe gọi điện thoại và nghe tin
 
 Mọi câu hỏi của app đều kết thúc bằng *"… sau tiếng bíp"*, rồi kêu một tiếng bíp to, dài khoảng 2 giây. Nói sau khi tiếng bíp tắt.
 
-- **"Gọi Mẹ"**, **"Gọi cho anh Hưng"** – gọi theo tên trong danh bạ (app hỏi lại để xác nhận)
-- **"Gọi số"** rồi đọc từng chữ số (ví dụ "không chín một hai…"), đọc xong im lặng chờ – app đọc lại số để xác nhận rồi mới gọi. Có thể nói liền "gọi số không chín một hai…".
+- **"Gọi Mẹ"**, **"Gọi chị Trang"**, **"Gọi Hưng"** – gọi theo tên trong danh bạ, nói cả tên hoặc một phần tên (không cần đúng thứ tự, không phân biệt dấu). Đúng một người khớp: app hỏi *"Bạn muốn gọi cho …, đúng không?"*. Nhiều người khớp (tối đa 6): app đọc *"Số 1: …. Số 2: …"* rồi hỏi gọi ai – nói **số thứ tự** ("hai", "số hai", "người thứ hai") là gọi ngay; nói "hủy" để thôi. Nhiều hơn 6 người: app xin nói thêm tên.
+- **"Gọi"** kèm số điện thoại, ví dụ **"gọi không ba bốn năm…"** (có hoặc không có chữ "số"), nói liền một hơi hoặc ngập ngừng đều được. App đọc lại: *"Bạn muốn gọi số …, đúng không? Nói đúng để thực hiện cuộc gọi, nói không để hủy."*
+- Chỉ nói **"gọi"** rồi dừng: app hỏi gọi ai.
 - **"Gọi lại"** – gọi lại người vừa gọi đến / gọi nhỡ
 - **"Đọc tin nhắn"** – đọc các tin cá nhân chưa nghe (bấm nhanh phím giảm âm lượng để dừng)
 - **"Tin nhóm"** – đọc tối đa 10 tin nhóm mới nhất
@@ -29,7 +30,7 @@ Mọi câu hỏi của app đều kết thúc bằng *"… sau tiếng bíp"*, r
 - **"Nói chậm" / "Nói nhanh"** – chỉnh tốc độ đọc
 - **"Hướng dẫn"** – nghe lại danh sách lệnh
 
-Lệnh chỉ được nhận khi **cả câu** đúng là một lệnh; được thêm từ đệm ở đầu/cuối câu như "à", "ừ", "đi", "nhé", "ạ" (ví dụ "ừ gọi mẹ đi"). Câu dài chỉ *có chứa* một lệnh (thường là tiếng TV) bị bỏ qua.
+App nghe **trọn câu** (chờ bạn im lặng khoảng 1,5 giây) rồi mới xử lý, nên ngập ngừng giữa câu không sao. Từ đệm như "à", "ừ", "đi", "nhé", "ạ" được bỏ qua. Câu dài hơn lệnh quá 2 chữ (thường là tiếng TV) bị bỏ qua. Không hiểu lệnh thì app nói lại chữ đã nghe được: *"Tôi nghe được: …"*.
 
 Khi app hỏi lại *"Gọi cho …, phải không?"*: nói **"đúng"**, "đúng rồi", "phải", "vâng", "có", "gọi đi" để gọi; **"không"**, "sai", "thôi", "hủy" để hủy. Câu dài hoặc lẫn từ khác không được tính – im lặng thì app tự hủy.
 

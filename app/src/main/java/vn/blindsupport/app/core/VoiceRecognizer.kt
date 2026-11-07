@@ -46,7 +46,7 @@ object VoiceRecognizer {
         private set
 
     /** Ghi lại câu nghe được vào nhật ký (để người hỗ trợ xem app nghe ra chữ gì). */
-    private fun log(text: String, accepted: Boolean) {
+    fun log(text: String, accepted: Boolean) {
         runCatching {
             val time = java.text.SimpleDateFormat("dd/MM HH:mm:ss", java.util.Locale.US).format(java.util.Date())
             val line = "$time ${if (accepted) "NHẬN" else "bỏ  "}  $text"
@@ -194,6 +194,90 @@ object VoiceRecognizer {
             runCatching { service.shutdown() }
             runCatching { recognizer.close() }
         }
+    }
+
+    /**
+     * Nghe trọn MỘT câu nói, kể cả khi người nói ngập ngừng giữa chừng ("gọi … chị Trang",
+     * "gọi không ba bốn năm … sáu bảy tám"): gom mọi đoạn bộ nhận dạng nghe được cho tới khi
+     * người dùng im lặng [silenceMs], hoặc [noSpeechMs] mà chưa nói gì, hoặc hết [maxMs].
+     * Trả về cả câu (đã bỏ chữ không chắc chắn), hoặc null nếu không nghe được gì.
+     */
+    suspend fun listenUtterance(
+        context: Context,
+        phrases: Collection<String>,
+        silenceMs: Long = 1_600,
+        noSpeechMs: Long = 8_000,
+        maxMs: Long = 20_000,
+    ): String? = listenMutex.withLock {
+        lastRejected = null
+        if (!hasMicPermission(context)) {
+            lastError = "Chưa cấp quyền micro"
+            return@withLock null
+        }
+        val m = ensureModel(context) ?: return@withLock null
+        val recognizer = newRecognizer(m, phrases) ?: return@withLock null
+        val service = try {
+            SpeechService(recognizer, SAMPLE_RATE)
+        } catch (e: Exception) {
+            lastError = "Không mở được micro: ${e.message}"
+            recognizer.close()
+            return@withLock null
+        }
+        val parts = ArrayList<String>()
+        var partial = ""
+        var lastActivity = System.currentTimeMillis()
+        val start = lastActivity
+        val done = CompletableDeferred<Unit>()
+        try {
+            val listener = object : RecognitionListener {
+                override fun onPartialResult(hypothesis: String?) {
+                    val p = runCatching { JSONObject(hypothesis ?: "").optString("partial") }.getOrDefault("").trim()
+                    if (p != partial) {
+                        partial = p
+                        if (p.isNotEmpty()) lastActivity = System.currentTimeMillis()
+                    }
+                }
+                override fun onResult(hypothesis: String?) {
+                    val t = parse(hypothesis)
+                    if (t.isNotBlank()) parts += t
+                    partial = ""
+                    lastActivity = System.currentTimeMillis()
+                }
+                override fun onFinalResult(hypothesis: String?) {
+                    val t = parse(hypothesis)
+                    if (t.isNotBlank()) parts += t
+                    partial = ""
+                    done.complete(Unit)
+                }
+                override fun onError(exception: Exception?) {
+                    lastError = exception?.message
+                    done.complete(Unit)
+                }
+                override fun onTimeout() { done.complete(Unit) }
+            }
+            if (!service.startListening(listener, maxMs.toInt())) done.complete(Unit)
+            coroutineScope {
+                val watchdog = launch {
+                    while (!done.isCompleted) {
+                        delay(150)
+                        val now = System.currentTimeMillis()
+                        val heard = parts.isNotEmpty() || partial.isNotEmpty()
+                        if (heard && now - lastActivity > silenceMs) done.complete(Unit)
+                        else if (!heard && now - start > noSpeechMs) done.complete(Unit)
+                    }
+                }
+                done.await()
+                watchdog.cancel()
+            }
+        } finally {
+            runCatching { service.stop() }
+            runCatching { service.shutdown() }
+            runCatching { recognizer.close() }
+        }
+        // Phần đang nói dở lúc dừng (bộ nhận dạng chưa kịp chốt) vẫn được giữ.
+        if (partial.isNotBlank()) parts += partial.replace("[unk]", " ").trim()
+        val text = parts.joinToString(" ").replace(Regex("\\s+"), " ").trim()
+        text.ifEmpty { null }
     }
 
     /**
