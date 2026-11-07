@@ -26,6 +26,11 @@ sealed class Command {
     data class ContactNotFound(val spoken: String) : Command()
     /** Chỉ nói "gọi": hỏi gọi ai. */
     object CallWho : Command()
+    /**
+     * "Gọi Zalo / WhatsApp …": app chưa gọi qua Zalo được. Báo cho người dùng biết rồi làm tiếp
+     * [inner] bằng sim (vẫn có bước hỏi "đúng không" trước khi gọi).
+     */
+    data class AppCallUnsupported(val app: String, val inner: Command) : Command()
     /** "Gọi" + số điện thoại – [digits] là phần số đã đọc kèm trong câu lệnh (có thể rỗng). */
     data class CallNumber(val digits: String) : Command()
     object CallBack : Command()
@@ -208,7 +213,24 @@ object CommandParser {
     }
 
     /** "gọi …": phân biệt gọi theo số điện thoại hay theo tên danh bạ. */
+    private val APP_WORDS = mapOf(
+        "zalo" to "Zalo", "da lô" to "Zalo", "za lô" to "Zalo", "dalo" to "Zalo",
+        "whatsapp" to "WhatsApp", "oát sáp" to "WhatsApp", "wát sáp" to "WhatsApp", "what" to "WhatsApp",
+    )
+
     private fun parseCall(words: List<String>, contacts: List<Contact>): Command {
+        // "gọi zalo chị Trang", "gọi chị Trang qua zalo": tách tên ứng dụng ra.
+        val joined = " " + words.joinToString(" ") + " "
+        val app = APP_WORDS.entries.firstOrNull { joined.contains(" ${it.key} ") }
+        if (app != null) {
+            val cleaned = joined.replace(" ${app.key} ", " ").split(' ')
+                .filter { it.isNotEmpty() && it != "qua" && it != "bằng" && it !in APP_WORDS.keys && it != "sáp" }
+            return Command.AppCallUnsupported(app.value, parseCallPlain(cleaned, contacts))
+        }
+        return parseCallPlain(words, contacts)
+    }
+
+    private fun parseCallPlain(words: List<String>, contacts: List<Contact>): Command {
         var rest = words
         var saidNumber = false
         while (rest.isNotEmpty() && rest.first() in CALL_HEAD) {

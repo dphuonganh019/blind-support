@@ -189,6 +189,12 @@ class VoiceCommandActivity : ComponentActivity() {
                 "Không tìm thấy ${command.spoken} trong danh bạ. Hãy nói lại tên, hoặc đọc số điện thoại, sau tiếng bíp.",
                 contacts,
             )
+            is Command.AppCallUnsupported -> {
+                Speaker.speak(
+                    "Ứng dụng chưa gọi được bằng ${command.app}. Tôi sẽ gọi điện thường bằng sim."
+                )
+                execute(command.inner, contacts)
+            }
             Command.CallWho -> askWhoToCall(
                 "Bạn muốn gọi ai? Hãy nói tên trong danh bạ, hoặc đọc số điện thoại, sau tiếng bíp.",
                 contacts,

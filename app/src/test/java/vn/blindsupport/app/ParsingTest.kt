@@ -125,6 +125,11 @@ class ParsingTest {
         assertEquals(Choice.Pick(1), Choice.parse("2", 3))
         assertEquals(Choice.Pick(1), Choice.parse("Số 2.", 3))
         assertEquals(Command.CallContact(chiTrang), CommandParser.parse("Gọi Chị Trang.", book))
+        // "Gọi Zalo …": báo chưa hỗ trợ, rồi gọi sim đúng người (không ghép "zalo" vào tên).
+        assertEquals(Command.AppCallUnsupported("Zalo", Command.CallContact(chiTrang)),
+            CommandParser.parse("Gọi Zalo chị Trang", book))
+        assertEquals(Command.AppCallUnsupported("Zalo", Command.CallContact(chiTrang)),
+            CommandParser.parse("gọi chị Trang qua zalo", book))
         // Lẫn một chữ nghe nhầm giữa các số vẫn là gọi số.
         assertEquals(Command.CallNumber("034567"), CommandParser.parse("gọi không ba bốn mẹ năm sáu bảy", book))
     }
