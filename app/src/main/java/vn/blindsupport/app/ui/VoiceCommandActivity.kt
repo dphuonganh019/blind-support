@@ -20,6 +20,7 @@ import kotlinx.coroutines.withContext
 import vn.blindsupport.app.call.CallManager
 import vn.blindsupport.app.core.AppVolume
 import vn.blindsupport.app.core.Beeper
+import vn.blindsupport.app.core.AppCallFinder
 import vn.blindsupport.app.core.Contact
 import vn.blindsupport.app.core.DigitWords
 import vn.blindsupport.app.core.ContactsRepo
@@ -189,11 +190,13 @@ class VoiceCommandActivity : ComponentActivity() {
                 "Không tìm thấy ${command.spoken} trong danh bạ. Hãy nói lại tên, hoặc đọc số điện thoại, sau tiếng bíp.",
                 contacts,
             )
-            is Command.AppCallUnsupported -> {
-                Speaker.speak(
-                    "Ứng dụng chưa gọi được bằng ${command.app}. Tôi sẽ gọi điện thường bằng sim."
-                )
-                execute(command.inner, contacts)
+            is Command.AppCall -> {
+                viaApp = command.app
+                try {
+                    execute(command.inner, contacts)
+                } finally {
+                    viaApp = null
+                }
             }
             Command.CallWho -> askWhoToCall(
                 "Bạn muốn gọi ai? Hãy nói tên trong danh bạ, hoặc đọc số điện thoại, sau tiếng bíp.",
@@ -373,7 +376,7 @@ class VoiceCommandActivity : ComponentActivity() {
             when (val choice = picked) {
                 is Choice.Pick -> {
                     val c = candidates[choice.index]
-                    placeCall(c.number, "số ${choice.index + 1}, ${labels[choice.index]}")
+                    placeCall(c.number, labels[choice.index])
                     return
                 }
                 Choice.Cancel -> {
@@ -393,7 +396,8 @@ class VoiceCommandActivity : ComponentActivity() {
         status("Gọi $name?")
         for (attempt in 0 until 2) {
             Speaker.speak(
-                if (attempt == 0) "Bạn muốn gọi cho $spokenName, đúng không? Nói: đúng, để gọi. Nói: không, để hủy."
+                if (attempt == 0) "Bạn muốn gọi ${viaApp?.let { "$it " } ?: ""}cho $spokenName, đúng không? " +
+                    "Nói: đúng, để gọi. Nói: không, để hủy."
                 else "Hãy nói: đúng, hoặc: không, sau tiếng bíp."
             )
             Beeper.beep()
@@ -464,12 +468,44 @@ class VoiceCommandActivity : ComponentActivity() {
             Speaker.speak("Ứng dụng chưa có quyền gọi điện. Hãy nhờ người hỗ trợ.")
             return
         }
+        viaApp?.let { app ->
+            if (tryAppCall(app, number, spokenName)) return
+            Speaker.speak("Không tìm thấy cách gọi $app cho người này. Tôi sẽ gọi điện thường bằng sim.")
+        }
         Speaker.speak("Đang gọi $spokenName.")
         try {
             val tm = getSystemService(TelecomManager::class.java)
-            tm.placeCall(Uri.fromParts("tel", number, null), Bundle())
+            tm.placeCall(Uri.fromParts("tel", TextUtils.dialableNumber(number), null), Bundle())
         } catch (e: Exception) {
             Speaker.speak("Không gọi được.")
+        }
+    }
+
+    /** Đang xử lý lệnh "gọi Zalo/WhatsApp …": tên ứng dụng, hoặc null nếu gọi sim. */
+    private var viaApp: String? = null
+
+    /**
+     * Gọi qua Zalo/WhatsApp bằng dòng "gọi" mà ứng dụng đó đồng bộ vào danh bạ. Trả về false nếu
+     * người này không có dòng như vậy (hoặc mở không được).
+     */
+    private suspend fun tryAppCall(app: String, number: String, spokenName: String): Boolean {
+        val key = if (app == "Zalo") "zalo" else "whatsapp"
+        val pkg = if (app == "Zalo") "com.zing.zalo" else "com.whatsapp"
+        val (action, diag) = withContext(Dispatchers.IO) {
+            AppCallFinder.find(this@VoiceCommandActivity, key, number, spokenName)
+        }
+        VoiceRecognizer.log("[$app] $spokenName: $diag", action != null)
+        if (action == null) return false
+        Speaker.speak("Đang gọi $app cho $spokenName.")
+        return try {
+            val uri = android.content.ContentUris.withAppendedId(android.provider.ContactsContract.Data.CONTENT_URI, action.dataId)
+            startActivity(
+                Intent(Intent.ACTION_VIEW).setDataAndType(uri, action.mimeType).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            VoipCallController.onOutgoingStarted(applicationContext, pkg)
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 

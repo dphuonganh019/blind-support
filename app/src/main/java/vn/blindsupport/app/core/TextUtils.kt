@@ -26,6 +26,19 @@ object TextUtils {
     /** Các từ của câu sau khi chuẩn hóa. */
     fun words(s: String): List<String> = normalize(s).split(' ').filter { it.isNotEmpty() }
 
+    /**
+     * Chuẩn hóa số để gọi bằng sim. Danh bạ do Zalo đồng bộ hay lưu dạng "84912345678" (thiếu
+     * dấu +): gọi thẳng số này sẽ bị tổng đài cắt sau vài giây. Đổi về "0912345678".
+     */
+    fun dialableNumber(number: String): String {
+        val trimmed = number.trim()
+        var digits = trimmed.filter { it.isDigit() }
+        if (trimmed.startsWith("+") && !trimmed.startsWith("+84")) return "+$digits"
+        if (digits.startsWith("0084")) digits = digits.substring(2)
+        if (digits.startsWith("84") && digits.length in 11..12) return "0" + digits.substring(2)
+        return if (digits.isEmpty()) trimmed else digits
+    }
+
     /** Đọc số điện thoại từng chữ số, chia nhóm để nghe dễ: "0 9 1 2, 3 4 5, 6 7 8". */
     fun speakableNumber(number: String?): String {
         if (number.isNullOrBlank()) return "số không xác định"

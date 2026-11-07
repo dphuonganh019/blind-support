@@ -47,7 +47,22 @@ object VoipCallController {
 
     fun appName(): String = current?.let { AppIds.label(it.pkg) } ?: ""
 
+    /** Vừa gọi đi qua Zalo/WhatsApp: thông báo "đang gọi" của cuộc gọi đi không phải cuộc gọi đến. */
+    @Volatile private var outgoingSince = 0L
+    @Volatile private var outgoingPkg: String? = null
+
+    fun isRecentOutgoing(pkg: String): Boolean =
+        pkg == outgoingPkg && System.currentTimeMillis() - outgoingSince < 90_000L
+
+    /** App vừa mở cuộc gọi đi qua [pkg]: bật loa ngoài như khi nghe máy. */
+    fun onOutgoingStarted(context: Context, pkg: String) {
+        outgoingPkg = pkg
+        outgoingSince = System.currentTimeMillis()
+        enableSpeaker(context.applicationContext, pkg, outgoing = true)
+    }
+
     fun onIncoming(context: Context, info: VoipCallInfo) {
+        if (isRecentOutgoing(info.pkg)) return
         val existing = current
         if (existing != null && existing.key == info.key && _state.value == State.RINGING) {
             // Thông báo được cập nhật: giữ nút mới nhất.
@@ -119,6 +134,10 @@ object VoipCallController {
     }
 
     private fun afterAnswered(context: Context, info: VoipCallInfo) {
+        enableSpeaker(context, info.pkg, outgoing = false)
+    }
+
+    private fun enableSpeaker(context: Context, pkg: String, outgoing: Boolean) {
         App.appScope.launch {
             for (wait in longArrayOf(800, 1500, 3000, 5000)) {
                 delay(wait)
@@ -132,17 +151,23 @@ object VoipCallController {
         val routeJob = App.appScope.launch {
             for (wait in longArrayOf(1_200, 1_500, 2_000, 3_000, 4_000)) {
                 delay(wait)
-                if (_state.value != State.ANSWERED && !vn.blindsupport.app.notify.BlindNotificationListener.voipCallInProgress) break
+                val active = _state.value == State.ANSWERED ||
+                    vn.blindsupport.app.notify.BlindNotificationListener.voipCallInProgress ||
+                    (outgoing && isRecentOutgoing(pkg))
+                if (!active) break
                 if (CallSpeaker.force(context)) routed = true
             }
         }
         // Cách 2: nhờ trợ năng bấm nút "Loa" trên màn hình cuộc gọi của Zalo.
-        UiClicker.arm(context, info.pkg, UiClicker.SPEAKER_KEYS, 12_000) { ok ->
+        UiClicker.arm(context, pkg, UiClicker.SPEAKER_KEYS, 12_000) { ok ->
             if (!ok) {
                 App.appScope.launch {
                     routeJob.join()
                     if (!routed) {
-                        Speaker.speak("Đã nghe máy. Chưa bật được loa ngoài, hãy áp máy lên tai.")
+                        Speaker.speak(
+                            if (outgoing) "Chưa bật được loa ngoài, hãy áp máy lên tai."
+                            else "Đã nghe máy. Chưa bật được loa ngoài, hãy áp máy lên tai."
+                        )
                     }
                 }
             }
@@ -152,7 +177,7 @@ object VoipCallController {
         App.appScope.launch {
             delay(2_500)
             val task = UiClicker.pending
-            if (task != null && task.pkg == info.pkg && !task.finished) {
+            if (task != null && task.pkg == pkg && !task.finished) {
                 ongoingIntent?.let { send(context, it) }
             }
         }

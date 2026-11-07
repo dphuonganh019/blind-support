@@ -126,9 +126,9 @@ class ParsingTest {
         assertEquals(Choice.Pick(1), Choice.parse("Số 2.", 3))
         assertEquals(Command.CallContact(chiTrang), CommandParser.parse("Gọi Chị Trang.", book))
         // "Gọi Zalo …": báo chưa hỗ trợ, rồi gọi sim đúng người (không ghép "zalo" vào tên).
-        assertEquals(Command.AppCallUnsupported("Zalo", Command.CallContact(chiTrang)),
+        assertEquals(Command.AppCall("Zalo", Command.CallContact(chiTrang)),
             CommandParser.parse("Gọi Zalo chị Trang", book))
-        assertEquals(Command.AppCallUnsupported("Zalo", Command.CallContact(chiTrang)),
+        assertEquals(Command.AppCall("Zalo", Command.CallContact(chiTrang)),
             CommandParser.parse("gọi chị Trang qua zalo", book))
         // Lẫn một chữ nghe nhầm giữa các số vẫn là gọi số.
         assertEquals(Command.CallNumber("034567"), CommandParser.parse("gọi không ba bốn mẹ năm sáu bảy", book))
@@ -193,6 +193,24 @@ class ParsingTest {
         assertNull(CommandParser.parse("giờ", contacts))
         assertNull(CommandParser.parse("ngày", contacts))
         assertNull(CommandParser.parse("hai", contacts))
+    }
+
+    @Test fun dialableNumber() {
+        assertEquals("0912345678", TextUtils.dialableNumber("84912345678"))
+        assertEquals("0912345678", TextUtils.dialableNumber("+84 912 345 678"))
+        assertEquals("0912345678", TextUtils.dialableNumber("0084912345678"))
+        assertEquals("0912345678", TextUtils.dialableNumber("091 234 5678"))
+        assertEquals("+12025550123", TextUtils.dialableNumber("+1 202 555 0123"))
+        assertEquals("113", TextUtils.dialableNumber("113"))
+    }
+
+    @Test fun sameNumberShownOnce_preferPhoneBookName() {
+        val a = Contact("HƯNG THỎ", "0912345678")
+        val b = Contact("Zalo Thỏ Ngoan", "84912345678")
+        val c = Contact("Zalo Hưng PA", "0987000111")
+        val r = CommandParser.findContacts(listOf("hưng"), listOf(a, b, c)) + CommandParser.findContacts(listOf("thỏ"), listOf(a, b, c))
+        assertTrue(r.contains(a))
+        assertFalse(CommandParser.findContacts(listOf("thỏ"), listOf(b, a)).contains(b))
     }
 
     @Test fun textUtils() {

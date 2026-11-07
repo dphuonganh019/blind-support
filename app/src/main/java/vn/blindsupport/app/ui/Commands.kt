@@ -27,10 +27,10 @@ sealed class Command {
     /** Chỉ nói "gọi": hỏi gọi ai. */
     object CallWho : Command()
     /**
-     * "Gọi Zalo / WhatsApp …": app chưa gọi qua Zalo được. Báo cho người dùng biết rồi làm tiếp
-     * [inner] bằng sim (vẫn có bước hỏi "đúng không" trước khi gọi).
+     * "Gọi Zalo / WhatsApp …": tìm người như lệnh gọi thường ([inner]), rồi gọi qua [app]. Không gọi
+     * qua [app] được thì báo và gọi bằng sim (vẫn có bước hỏi "đúng không" trước khi gọi).
      */
-    data class AppCallUnsupported(val app: String, val inner: Command) : Command()
+    data class AppCall(val app: String, val inner: Command) : Command()
     /** "Gọi" + số điện thoại – [digits] là phần số đã đọc kèm trong câu lệnh (có thể rỗng). */
     data class CallNumber(val digits: String) : Command()
     object CallBack : Command()
@@ -225,7 +225,7 @@ object CommandParser {
         if (app != null) {
             val cleaned = joined.replace(" ${app.key} ", " ").split(' ')
                 .filter { it.isNotEmpty() && it != "qua" && it != "bằng" && it !in APP_WORDS.keys && it != "sáp" }
-            return Command.AppCallUnsupported(app.value, parseCallPlain(cleaned, contacts))
+            return Command.AppCall(app.value, parseCallPlain(cleaned, contacts))
         }
         return parseCallPlain(words, contacts)
     }
@@ -283,9 +283,18 @@ object CommandParser {
     }
 
     /** Tên ngắn hơn (khớp sát hơn) lên trước, rồi theo thứ tự chữ cái. */
+    /**
+     * Tên ngắn hơn (khớp sát hơn) lên trước, rồi theo thứ tự chữ cái. Cùng một số điện thoại chỉ
+     * giữ một người – ưu tiên tên lưu trong danh bạ máy hơn tên Zalo tự đồng bộ ("Zalo …").
+     */
     private fun sortCandidates(list: List<Contact>, spoken: List<String>): List<Contact> =
-        list.distinctBy { it.number.filter(Char::isDigit) + "|" + it.normalizedName }
-            .sortedWith(compareBy<Contact>({ TextUtils.words(it.normalizedName).size - spoken.size }, { it.normalizedName }))
+        list.sortedWith(
+            compareBy<Contact>(
+                { if (it.normalizedName.startsWith("zalo ")) 1 else 0 },
+                { TextUtils.words(it.normalizedName).size - spoken.size },
+                { it.normalizedName },
+            )
+        ).distinctBy { TextUtils.dialableNumber(it.number) }
 
     fun isYes(text: String): Boolean = Confirm.parse(text) == Confirm.YES
 
