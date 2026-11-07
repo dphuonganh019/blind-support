@@ -131,6 +131,11 @@ object Prefs {
         get() = sp.getString("last_ui_dump", "") ?: ""
         set(v) = sp.edit().putString("last_ui_dump", v.take(60_000)).apply()
 
+    /** Nhật ký các câu bộ nhận dạng giọng nói nghe ra gần đây (để chỉnh lệnh theo giọng thật). */
+    var recognitionLog: String
+        get() = sp.getString("recognition_log", "") ?: ""
+        set(v) = sp.edit().putString("recognition_log", v).apply()
+
     var lastBatteryLevelAnnounced: Int
         get() = sp.getInt("last_battery_announced", 100)
         set(v) = sp.edit().putInt("last_battery_announced", v).apply()

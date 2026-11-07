@@ -111,11 +111,19 @@ object CommandParser {
         return list.distinct()
     }
 
-    /** Bỏ từ đệm ở hai đầu câu. Không bao giờ bỏ hết cả câu. */
+    /** Hư từ không mang nghĩa lệnh, được bỏ ở bất kỳ đâu trong câu ("đọc tin nhắn à nhé"). */
+    private val PARTICLES = setOf("à", "ạ", "ờ", "ừm", "ơi", "nhé", "nha", "nhỉ", "hả")
+
+    /**
+     * Bỏ từ đệm ở hai đầu câu, và tối đa 2 hư từ ở giữa câu. Không bao giờ bỏ hết cả câu.
+     * Giới hạn 2 để câu dài của TV/người xung quanh vẫn không lọt qua.
+     */
     fun stripFillers(words: List<String>): List<String> {
         var w = words
         while (w.size > 1 && w.first() in LEADING) w = w.drop(1)
         while (w.size > 1 && w.last() in TRAILING) w = w.dropLast(1)
+        val inner = w.count { it in PARTICLES }
+        if (inner in 1..2 && w.size - inner >= 1) w = w.filter { it !in PARTICLES }
         return w
     }
 

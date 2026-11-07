@@ -153,6 +153,17 @@ class SetupActivity : ComponentActivity() {
             startActivity(Intent(this, VoiceCommandActivity::class.java))
         })
         col.addView(button("Giả lập cuộc gọi đến (không gọi thật)") { simulateCall() })
+        col.addView(button("Gửi nhật ký nhận dạng giọng nói") {
+            val log = Prefs.recognitionLog
+            if (log.isBlank()) {
+                lifecycleScope.launch { Speaker.speak("Chưa có nhật ký. Hãy thử nói vài lệnh trước.") }
+            } else {
+                val i = Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_SUBJECT, "Trợ Lý Nghe Gọi ${versionName()} - nhật ký nhận dạng")
+                    .putExtra(Intent.EXTRA_TEXT, "Mỗi dòng: thời gian, NHẬN/bỏ, chữ app nghe được\n\n$log")
+                open(Intent.createChooser(i, "Gửi qua"))
+            }
+        })
         col.addView(note(
             "Nếu app báo \"chưa bật được loa ngoài\" khi nghe máy Zalo/WhatsApp: ngay sau cuộc gọi đó, " +
                 "bấm nút dưới đây và gửi nội dung cho người làm app để sửa."

@@ -78,6 +78,10 @@ class ParsingTest {
         assertEquals(Command.CallContact(me), CommandParser.parse("ừ gọi mẹ đi", contacts))
         assertEquals(Command.ReadMessages, CommandParser.parse("đọc tin nhắn nhé", contacts))
         assertEquals(Command.ReadGroupMessages, CommandParser.parse("tin nhóm", contacts))
+        // Tối đa 2 hư từ ở giữa câu được bỏ qua.
+        assertEquals(Command.ReadMessages, CommandParser.parse("đọc tin nhắn à nhé", contacts))
+        assertEquals(Command.CallContact(me), CommandParser.parse("gọi à mẹ", contacts))
+        assertNull(CommandParser.parse("à ạ ơi nhé", contacts))
         // Câu dài chỉ "có chứa" một lệnh (tiếng TV, người xung quanh): không nhận. Lỗi B4.
         for (t in listOf("anh nói to lên cho mọi người nghe", "hôm nay trời nói chậm lại", "con gọi lại cho mẹ sau",
             "mẹ ơi không có gì đâu", "gọi số nhà", "mấy giờ thì về", "ăn cơm chưa")) {

@@ -41,6 +41,20 @@ object VoiceRecognizer {
     @Volatile var lastError: String? = null
         private set
 
+    /** Câu nghe được gần nhất trong lần nghe vừa rồi mà bị bỏ vì không khớp (null nếu im lặng). */
+    @Volatile var lastRejected: String? = null
+        private set
+
+    /** Ghi lại câu nghe được vào nhật ký (để người hỗ trợ xem app nghe ra chữ gì). */
+    private fun log(text: String, accepted: Boolean) {
+        runCatching {
+            val time = java.text.SimpleDateFormat("dd/MM HH:mm:ss", java.util.Locale.US).format(java.util.Date())
+            val line = "$time ${if (accepted) "NHẬN" else "bỏ  "}  $text"
+            val lines = (Prefs.recognitionLog.lines().filter { it.isNotBlank() } + line).takeLast(60)
+            Prefs.recognitionLog = lines.joinToString("\n")
+        }
+    }
+
     val isModelLoaded: Boolean get() = model != null
 
     fun preload(context: Context, scope: CoroutineScope) {
@@ -128,6 +142,7 @@ object VoiceRecognizer {
             lastError = "Chưa cấp quyền micro"
             return@withLock null
         }
+        lastRejected = null
         val m = ensureModel(context) ?: return@withLock null
         val recognizer = newRecognizer(m, phrases) ?: return@withLock null
         val service = try {
@@ -147,11 +162,23 @@ object VoiceRecognizer {
                     override fun onPartialResult(hypothesis: String?) {}
                     override fun onResult(hypothesis: String?) {
                         val t = parse(hypothesis)
-                        if (t.isNotBlank() && accept(t)) finish(t)
+                        if (t.isBlank()) return
+                        if (accept(t)) {
+                            log(t, true)
+                            finish(t)
+                        } else {
+                            log(t, false)
+                            lastRejected = t
+                        }
                     }
                     override fun onFinalResult(hypothesis: String?) {
                         val t = parse(hypothesis)
-                        finish(if (t.isNotBlank() && accept(t)) t else null)
+                        val ok = t.isNotBlank() && accept(t)
+                        if (t.isNotBlank()) {
+                            log(t, ok)
+                            if (!ok) lastRejected = t
+                        }
+                        finish(if (ok) t else null)
                     }
                     override fun onError(exception: Exception?) {
                         lastError = exception?.message

@@ -148,9 +148,10 @@ class VoiceCommandActivity : ComponentActivity() {
         val greeting = "Mời nói lệnh sau tiếng bíp."
 
         var command: Command? = null
+        var retryPrompt = "Tôi chưa nghe rõ. Mời nói lại sau tiếng bíp."
         for (attempt in 0 until 2) {
             status("Đang nghe...")
-            Speaker.speak(if (attempt == 0) greeting else "Tôi chưa nghe rõ. Mời nói lại sau tiếng bíp.")
+            Speaker.speak(if (attempt == 0) greeting else retryPrompt)
             Beeper.beep()
             val heard = VoiceRecognizer.listen(this, phrases, 8_000) { CommandParser.parse(it, contacts) != null }
             if (heard == null && VoiceRecognizer.lastError != null && !VoiceRecognizer.isModelLoaded) {
@@ -160,6 +161,12 @@ class VoiceCommandActivity : ComponentActivity() {
             }
             command = heard?.let { CommandParser.parse(it, contacts) }
             if (command != null) break
+            // Nghe ra chữ nhưng không khớp lệnh nào: nói lại chữ đã nghe để người dùng biết
+            // app có nghe thấy, chỉ là chưa hiểu (khác với im lặng không nghe thấy gì).
+            VoiceRecognizer.lastRejected?.let { got ->
+                status("Nghe được: \"$got\"")
+                retryPrompt = "Tôi nghe được: $got. Đó không phải là lệnh. Mời nói lại sau tiếng bíp."
+            }
         }
         if (command == null) {
             Speaker.speak("Chưa nghe được lệnh. Nói: hướng dẫn, để nghe các lệnh.")
