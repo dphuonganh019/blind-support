@@ -12,26 +12,30 @@ App Android giúp người khiếm thị **nghe gọi điện thoại, gọi đi
 ### Cuộc gọi sim
 
 1. Chuông máy reo **6 giây** trước (chỉnh được 0 / 3 / 6 / 10 giây), máy **rung liên tục** suốt lúc có cuộc gọi.
-2. App tắt chuông thật (để tiếng chuông không lọt vào micro) và nói:
-   *"Có điện thoại! Cuộc gọi từ **Hưng Thỏ**. Bạn có muốn nghe không? Hãy nói: nghe, hoặc: không, sau tiếng bíp. Hoặc bấm phím bất kỳ ở cạnh máy để nghe."*
+2. App tắt chuông thật (để tiếng chuông không lọt vào micro) và nói ngắn gọn:
+   *"Có điện thoại! **Hưng Thỏ** gọi. Nói: nghe, hoặc bấm phím cạnh máy."*
    Số chưa lưu danh bạ thì đọc từng chữ số; số ẩn thì nói "số ẩn".
-3. Tiếng bíp → app nghe khoảng 7 giây.
-4. Nếu chưa trả lời: app phát **tiếng chuông của riêng app** khoảng 3 giây (vẫn kêu khi máy để im lặng), rồi hỏi ngắn: *"Bạn có muốn nghe máy không? Nói: nghe, để nghe."* – lặp lại cho tới khi người gọi cúp máy.
+3. Tiếng bíp ngắn → app nghe khoảng **9 giây**.
+4. Nếu chưa trả lời: app phát **tiếng chuông của riêng app** khoảng 1,5 giây (vẫn kêu khi máy để im lặng), rồi hỏi ngắn: *"Bạn có muốn nghe máy không? Nói: nghe, để nghe."* (nghe 7 giây) – lặp lại cho tới khi người gọi cúp máy.
+
+> Nhà mạng thường chỉ cho đổ chuông khoảng 30–40 giây rồi tự cắt (bên gọi có thể nghe "đường dây bận"). Với cài đặt mặc định, lần nghe thứ nhất xong ở khoảng giây 22, lần thứ hai ở khoảng giây 33. Nếu người dùng hay trả lời chậm, giảm "Đổ chuông trước khi đọc tên" xuống 3 giây.
 
 Cách trả lời:
 
 | Muốn | Cách làm |
 |---|---|
 | Nghe máy | Nói **"nghe"** (hoặc "nghe máy", "bắt máy", "trả lời", "có", "vâng", "ừ") – hoặc **bấm phím bất kỳ ở cạnh máy** (tăng/giảm âm lượng, nguồn) – hoặc chạm **nửa trên màn hình** (nút NGHE màu xanh) |
-| Từ chối | Nói **"không"** (hoặc "không nghe", "từ chối", "tắt máy", "cúp máy") – hoặc **giữ lâu** nửa dưới màn hình (nút TỪ CHỐI màu đỏ) |
+| Từ chối | Nói **"không"** (hoặc "không nghe", "từ chối", "tắt máy", "cúp máy"), app hỏi lại *"Từ chối cuộc gọi, đúng không?"* – nói **"đúng"** (hoặc "không" lần nữa) mới từ chối – hoặc **giữ lâu** nửa dưới màn hình (nút TỪ CHỐI màu đỏ) |
 
 Nghe máy xong app tự **bật loa ngoài** và đưa **âm lượng cuộc gọi lên tối đa**.
 
+> Im lặng hoặc tiếng ồn (mèo kêu, quạt, TV…) **không bao giờ** làm app từ chối cuộc gọi: chữ "không" chỉ được tính khi bộ nhận dạng rất chắc chắn, và vẫn phải xác nhận lại. Không trả lời gì thì app tiếp tục đổ chuông và hỏi lại.
+>
 > Vì sao mọi phím cạnh máy đều là "nghe": lúc cuộc gọi sim đổ chuông, Android giữ phím lại và chỉ báo cho app là "người dùng vừa bấm phím", không cho biết phím nào.
 
 ### Cuộc gọi Zalo / WhatsApp
 
-1. Chuông Zalo/WhatsApp reo khoảng **3 giây** (Zalo đổ chuông ngắn hơn sim), rồi app nói: *"Có điện thoại Zalo! Cuộc gọi từ …. Bạn có muốn nghe không? Hãy nói: nghe, hoặc: không, sau tiếng bíp."*
+1. Chuông Zalo/WhatsApp reo khoảng **3 giây** (Zalo đổ chuông ngắn hơn sim), rồi app nói: *"Có điện thoại Zalo! … gọi. Nói: nghe."* Các lần sau như cuộc gọi sim.
 2. Vì chuông Zalo/WhatsApp vẫn kêu (app không tắt được), app chỉ nhận **"nghe"**, "nghe máy", "bắt máy", "trả lời" để nghe máy (không nhận "có", "ừ", "vâng" – tiếng chuông hay bị nghe nhầm thành các từ này). Nói **"không"** để từ chối.
 3. **Phím cạnh máy không dùng được** để nghe cuộc gọi Zalo/WhatsApp (Android không chuyển phím cho app), nên app không nhắc cách này.
 4. Nghe máy xong, app tự bật **loa ngoài** bằng Trợ năng:
@@ -190,7 +194,7 @@ Làm trên **chính chiếc máy sẽ trao**, với giọng người dùng thậ
 - [ ] Gọi sim đến khi **màn hình khóa**: chuông reo ~6 giây, máy rung, nghe đọc tên; nói "nghe" → nhấc máy, loa ngoài bật
 - [ ] Gọi sim đến, nói "không" → từ chối
 - [ ] Gọi sim đến, **bấm phím bất kỳ ở cạnh máy** → nhấc máy
-- [ ] Gọi sim đến, im lặng → nghe tiếng chuông của app và câu hỏi ngắn lặp lại
+- [ ] Gọi sim đến, im lặng (để TV/quạt chạy) → nghe tiếng chuông của app và câu hỏi ngắn lặp lại; cuộc gọi **không** bị từ chối
 - [ ] Gọi từ số **không có trong danh bạ** → đọc từng chữ số
 - [ ] Để nhỡ một cuộc gọi sim → nghe báo cuộc gọi nhỡ kèm tên/số; giữ phím giảm âm lượng, nói "gọi lại"
 - [ ] Gọi **Zalo** đến (màn hình khóa và mở khóa) → nói "nghe" → nhấc máy, **loa ngoài bật**

@@ -360,20 +360,30 @@ object VoiceRecognizer {
     }
 
     /** Lấy câu nhận được, bỏ các từ bộ nhận dạng không chắc chắn. */
+    /** Độ tin cậy thấp nhất trong các chữ của câu vừa nghe được (0..1). */
+    @Volatile var lastConfidence: Double = 1.0
+        private set
+
     private fun parse(hypothesis: String?): String {
         if (hypothesis.isNullOrBlank()) return ""
         val obj = runCatching { JSONObject(hypothesis) }.getOrNull() ?: return ""
         val words = obj.optJSONArray("result")
+        var minConf = 1.0
         val raw = if (words != null && words.length() > 0) {
             buildList {
                 for (i in 0 until words.length()) {
                     val w = words.optJSONObject(i) ?: continue
-                    if (w.optDouble("conf", 1.0) >= MIN_CONF) add(w.optString("word"))
+                    val conf = w.optDouble("conf", 1.0)
+                    if (conf >= MIN_CONF) {
+                        add(w.optString("word"))
+                        minConf = minOf(minConf, conf)
+                    }
                 }
             }.joinToString(" ")
         } else {
             obj.optString("text")
         }
+        lastConfidence = minConf
         return raw.replace("[unk]", " ").replace(Regex("\\s+"), " ").trim()
     }
 }

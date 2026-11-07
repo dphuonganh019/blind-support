@@ -30,6 +30,25 @@ enum class CallIntent { ANSWER, DECLINE;
         val PHRASES = ANSWER_WORDS + DECLINE_WORDS + FILLER_WORDS
 
         /**
+         * Độ tin cậy tối thiểu để tính là TỪ CHỐI. Cao hơn hẳn "nghe": từ chối nhầm là mất cuộc gọi,
+         * còn tiếng ồn, tiếng thở, dư âm tiếng bíp hay bị bộ nhận dạng offline "đoán" thành "không".
+         */
+        const val DECLINE_MIN_CONF = 0.8
+
+        /** Câu trả lời cho "Từ chối cuộc gọi, đúng không?". */
+        private val CONFIRM_DECLINE = listOf("đúng", "đúng rồi", "phải", "vâng", "ừ", "từ chối", "không", "tắt máy")
+        val CONFIRM_PHRASES = (CONFIRM_DECLINE + ANSWER_WORDS + FILLER_WORDS).distinct()
+        private val CONFIRM_SET = CONFIRM_DECLINE.flatMap { TextUtils.words(it) }.toSet()
+
+        /** ANSWER nếu đổi ý muốn nghe, DECLINE nếu xác nhận từ chối, null nếu không rõ. */
+        fun parseDeclineConfirm(text: String): CallIntent? {
+            val words = TextUtils.words(text)
+            if (words.isEmpty() || words.size > 3) return null
+            if ("nghe" in words) return ANSWER
+            return if (words.all { it in CONFIRM_SET }) DECLINE else null
+        }
+
+        /**
          * Khi chuông KHÔNG tắt được (cuộc gọi Zalo / WhatsApp), tiếng chuông lọt vào micro hay bị
          * nhận thành "có", "ừ", "vâng". Khi đó chỉ nhận những cụm có chữ "nghe" hoặc nói rõ ý.
          */
@@ -108,28 +127,45 @@ class VoiceCallPrompt(
             var round = 0
             while (isRinging() && round < 12) {
                 if (!ringerSilenced) RingVolumeGuard.lower(context)
+                // Câu thật ngắn: nhà mạng chỉ cho đổ chuông khoảng 30–40 giây, phải kịp hỏi 2 lần.
                 val attention = if (appName != null) "Có điện thoại $appName! " else "Có điện thoại! "
                 // Phím cạnh máy chỉ nghe được cuộc gọi sim (với Zalo/WhatsApp, Android không chuyển phím cho app).
-                val keyHint = if (appName == null) " Hoặc bấm phím bất kỳ ở cạnh máy để nghe." else ""
                 val sentence = when {
-                    !Prefs.voiceAnswer -> "${attention}Cuộc gọi từ $callerLabel."
-                    round == 0 -> "${attention}Cuộc gọi từ $callerLabel. Bạn có muốn nghe không? " +
-                        "Hãy nói: nghe, hoặc: không, sau tiếng bíp.$keyHint"
-                    // Các lần sau: thật ngắn, kẻo người gọi cúp máy trước khi kịp trả lời.
+                    !Prefs.voiceAnswer -> "$attention$callerLabel gọi."
+                    round == 0 && appName == null -> "$attention$callerLabel gọi. Nói: nghe, hoặc bấm phím cạnh máy."
+                    round == 0 -> "$attention$callerLabel gọi. Nói: nghe."
                     else -> "Bạn có muốn nghe máy không? Nói: nghe, để nghe."
                 }
                 Speaker.speak(sentence)
                 if (!isRinging()) return
                 if (!Prefs.voiceAnswer) return
 
-                Beeper.beep()
+                callBeep()
                 if (!isRinging()) return
                 val audible = !ringerSilenced
-                val heard = VoiceRecognizer.listen(context, CallIntent.PHRASES, 7_000) {
+                // Lần nghe đầu dài hơn: có thể không còn kịp lần thứ hai.
+                val heard = VoiceRecognizer.listen(context, CallIntent.PHRASES, if (round == 0) 9_000 else 7_000) {
                     CallIntent.parse(it, audible) != null
                 }
                 if (!isRinging()) return
-                when (heard?.let { CallIntent.parse(it, audible) }) {
+                var intent = heard?.let { CallIntent.parse(it, audible) }
+                // "Không" nghe không chắc chắn: coi như chưa nghe gì (thường là tiếng ồn).
+                if (intent == CallIntent.DECLINE && VoiceRecognizer.lastConfidence < CallIntent.DECLINE_MIN_CONF) {
+                    intent = null
+                }
+                // Hỏi lại trước khi từ chối; im lặng thì KHÔNG từ chối, tiếp tục đổ chuông.
+                if (intent == CallIntent.DECLINE) {
+                    Speaker.speak("Từ chối cuộc gọi, đúng không?")
+                    if (!isRinging()) return
+                    callBeep()
+                    if (!isRinging()) return
+                    val again = VoiceRecognizer.listen(context, CallIntent.CONFIRM_PHRASES, 5_000) {
+                        CallIntent.parseDeclineConfirm(it) != null
+                    }
+                    if (!isRinging()) return
+                    intent = again?.let { CallIntent.parseDeclineConfirm(it) }
+                }
+                when (intent) {
                     CallIntent.ANSWER -> {
                         Speaker.speak("Nghe máy.")
                         if (isRinging()) onAnswer()
@@ -144,16 +180,16 @@ class VoiceCallPrompt(
                 }
 
                 if (!ringerSilenced) {
-                    // Trả lại chuông vài giây để người dùng vẫn biết máy đang đổ chuông.
+                    // Trả lại chuông một chút để người dùng vẫn biết máy đang đổ chuông.
                     RingVolumeGuard.restore(context)
                     var waited = 0
-                    while (waited < 3_000 && isRinging()) {
+                    while (waited < 1_500 && isRinging()) {
                         delay(250)
                         waited += 250
                     }
                 } else {
-                    // Chuông thật đã tắt: app tự phát tiếng chuông xen giữa các lần hỏi.
-                    if (isRinging()) Speaker.ring(3_000)
+                    // Chuông thật đã tắt: app tự phát tiếng chuông ngắn xen giữa các lần hỏi.
+                    if (isRinging()) Speaker.ring(1_500)
                 }
                 round++
             }
@@ -162,6 +198,15 @@ class VoiceCallPrompt(
             RingVolumeGuard.restore(context)
             if (micHeld) MicForegroundService.stop(context)
         }
+    }
+
+    /**
+     * Tiếng bíp ngắn (0,8 giây) cho câu hỏi khi có cuộc gọi, rồi chờ dư âm tắt hẳn mới mở micro
+     * (dư âm tiếng bíp hay bị nghe nhầm thành "không").
+     */
+    private suspend fun callBeep() {
+        if (!Speaker.longBeep(800)) Beeper.beep()
+        delay(500)
     }
 
     @Suppress("DEPRECATION")
