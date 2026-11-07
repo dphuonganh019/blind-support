@@ -7,10 +7,10 @@ App Android giúp người khiếm thị nghe gọi điện thoại và nghe tin
 | Tình huống | App làm gì |
 |---|---|
 | Có cuộc gọi sim đến | Đọc tên trong danh bạ (hoặc đọc từng số), hỏi *"Bạn có muốn nghe không?"*. Nói **"nghe"** → nhấc máy và bật loa ngoài. Nói **"không"** → từ chối. Phím tăng âm lượng = nghe; phím giảm âm lượng = **tắt chuông, ngừng hỏi** (không từ chối). Trên màn hình phải **giữ** nút mới từ chối được. Trong lúc app chờ câu trả lời, chuông cuộc gọi sim được tắt để tiếng chuông không lọt vào micro gây nhận nhầm. |
-| Có cuộc gọi Zalo / WhatsApp | Như trên, dùng nút Trả lời/Từ chối trong thông báo của Zalo/WhatsApp; sau khi nghe máy, app tự bấm nút **Loa** (cần bật Trợ năng). Nếu không bấm được loa, app nói *"hãy áp máy lên tai"*. |
+| Có cuộc gọi Zalo / WhatsApp | Như trên, dùng nút Trả lời/Từ chối trong thông báo của Zalo/WhatsApp; sau khi nghe máy, app tự bấm nút **Loa** (cần bật Trợ năng). Nếu không bấm được loa, app nói *"hãy áp máy lên tai"*. Vì chuông Zalo/WhatsApp không tắt được, lúc này app chỉ nhận **"nghe"**, "nghe máy", "bắt máy", "trả lời" (không nhận "có", "ừ", "vâng" – tiếng chuông hay bị nghe nhầm thành các từ này). |
 | Cuộc gọi nhỡ (sim, Zalo, WhatsApp) | Đọc to: *"Bạn vừa nhỡ cuộc gọi từ …"* |
-| Tin nhắn Zalo, WhatsApp, SMS | Đọc to người gửi và nội dung. Tin nhóm mặc định chỉ lưu lại, không đọc to. Đang gọi điện thì không đọc, lưu lại để nghe sau. Máy để im lặng **vẫn đọc**. Có thể bật **giờ yên tĩnh** (22h–6h, mặc định tắt) để không đọc tin ban đêm. |
-| **Giữ phím giảm âm lượng ~2 giây** (mọi hãng máy) hoặc nút nguồn (Samsung) | Máy rung nhẹ rồi mở chế độ nghe lệnh (xem bảng lệnh bên dưới). Bấm nhanh phím giảm âm lượng vẫn giảm âm lượng bình thường. Màn hình đang tắt thì bấm nút nguồn cho sáng trước. |
+| Tin nhắn Zalo, WhatsApp, SMS | Đọc to người gửi và nội dung. Tin nhóm mặc định chỉ lưu lại (riêng với tin cá nhân), không đọc to; nói **"tin nhóm"** để nghe. Đang gọi điện thì không đọc, lưu lại để nghe sau. Máy để im lặng **vẫn đọc**. **Giờ yên tĩnh** (22h–6h) **mặc định bật**: ban đêm không đọc to tin nhắn (vẫn báo cuộc gọi), hết giờ yên tĩnh app nhắc số tin mới một lần. |
+| **Giữ phím giảm âm lượng ~1,5 giây** (mọi hãng máy) hoặc nút nguồn (Samsung) | Máy rung nhẹ rồi mở chế độ nghe lệnh (xem bảng lệnh bên dưới). Bấm nhanh phím giảm âm lượng vẫn giảm âm lượng bình thường; khi app đang đọc (ví dụ đọc tin nhắn) thì bấm nhanh để **dừng đọc**. Màn hình đang tắt app vẫn thử nhận phím và tự bật sáng màn hình; nếu máy không rung thì bấm nút nguồn cho sáng rồi giữ lại. Cần bật Trợ năng – nếu Trợ năng bị tắt hoặc bị hệ thống ngắt, app **đọc to cảnh báo** ngay ở lần kiểm tra kế tiếp. |
 | Pin | Báo pin yếu (20%, 10%, 5%), cắm sạc, rút sạc, sạc đầy. |
 
 ### Lệnh giọng nói (sau khi giữ phím giảm âm lượng và nghe tiếng bíp)
@@ -20,13 +20,18 @@ Mọi câu hỏi của app đều kết thúc bằng *"… sau tiếng bíp"*, r
 - **"Gọi Mẹ"**, **"Gọi cho anh Hưng"** – gọi theo tên trong danh bạ (app hỏi lại để xác nhận)
 - **"Gọi số"** rồi đọc từng chữ số (ví dụ "không chín một hai…"), đọc xong im lặng chờ – app đọc lại số để xác nhận rồi mới gọi. Có thể nói liền "gọi số không chín một hai…".
 - **"Gọi lại"** – gọi lại người vừa gọi đến / gọi nhỡ
-- **"Đọc tin nhắn"** – đọc các tin chưa nghe
+- **"Đọc tin nhắn"** – đọc các tin cá nhân chưa nghe (bấm nhanh phím giảm âm lượng để dừng)
+- **"Tin nhóm"** – đọc tối đa 10 tin nhóm mới nhất
 - **"Cuộc gọi nhỡ"** – đọc danh sách cuộc gọi nhỡ trong 24 giờ
 - **"Mấy giờ"**, **"Pin"**
 - **"Danh bạ"** – đọc tên trong danh bạ
 - **"To lên" / "Nhỏ xuống"** – chỉnh độ to giọng đọc
 - **"Nói chậm" / "Nói nhanh"** – chỉnh tốc độ đọc
 - **"Hướng dẫn"** – nghe lại danh sách lệnh
+
+Lệnh chỉ được nhận khi **cả câu** đúng là một lệnh; được thêm từ đệm ở đầu/cuối câu như "à", "ừ", "đi", "nhé", "ạ" (ví dụ "ừ gọi mẹ đi"). Câu dài chỉ *có chứa* một lệnh (thường là tiếng TV) bị bỏ qua.
+
+Khi app hỏi lại *"Gọi cho …, phải không?"*: nói **"đúng"**, "đúng rồi", "phải", "vâng", "có", "gọi đi" để gọi; **"không"**, "sai", "thôi", "hủy" để hủy. Câu dài hoặc lẫn từ khác không được tính – im lặng thì app tự hủy.
 
 ## Tải APK
 
@@ -46,7 +51,8 @@ Các bản cập nhật đều được ký cùng một khóa (`keystore/release
    - Nếu Samsung báo **"Cài đặt bị hạn chế"**: Cài đặt → Ứng dụng → Trợ Lý Nghe Gọi → bấm ⋮ góc trên → **"Cho phép cài đặt hạn chế"**, rồi bật lại quyền.
    - Hiển thị trên ứng dụng khác, không giới hạn pin, hiện toàn màn hình khi khóa máy
    - Tắt **"Tạm dừng hoạt động nếu không dùng"** (để Android không tự thu hồi quyền)
-   - **Giọng đọc tiếng Việt**: nếu ❌, cài/tải dữ liệu giọng tiếng Việt cho "Dịch vụ giọng nói của Google" (Speech Services by Google) để dùng offline.
+   - **Giọng đọc tiếng Việt** và **"đã tải về máy"**: nếu ❌, cài/tải dữ liệu giọng tiếng Việt cho "Dịch vụ giọng nói của Google" (Speech Services by Google) để dùng offline. Nếu giọng đọc bị lỗi (ví dụ mất mạng mà giọng chưa tải về), app phát **3 tiếng tít ngắn** thay vì im lặng.
+   - Nếu màn hình hiện danh sách **"tên trong danh bạ KHÔNG gọi được bằng giọng nói"**: đổi các tên đó trong danh bạ sang chữ tiếng Việt đơn giản.
 4. Cài **nút nguồn** để mở lệnh giọng nói (chọn một trong hai):
    - **Nhấn giữ nút nguồn** (khuyên dùng): Cài đặt → Tính năng nâng cao → Phím sườn → Nhấn và giữ → **Trợ lý kỹ thuật số** → chọn **Trợ Lý Nghe Gọi** (nằm trong mục "Ứng dụng khác"). Nếu máy hỏi, chọn đặt làm ứng dụng trợ lý mặc định.
    - **Nhấn đúp nút nguồn**: Cài đặt → Tính năng nâng cao → Phím sườn → Nhấn hai lần → Mở ứng dụng → **Trợ Lý Nghe Gọi**.
@@ -107,15 +113,17 @@ Không. App không chạy như app thường mà dựa vào 3 dịch vụ do And
 - **Ứng dụng điện thoại mặc định**: Android tự đánh thức app mỗi khi có cuộc gọi sim.
 - **Quyền đọc thông báo** và **Trợ năng**: Android giữ chạy thường trực và tự bật lại nếu bị tắt.
 
-Ngoài ra app có "người gác" chạy khoảng 15 phút một lần và sau khi bật máy, để xin kết nối lại dịch vụ nếu bị Samsung ngắt và **đọc to cảnh báo** nếu mất quyền quan trọng (tối đa 6 tiếng một lần). Vuốt tắt app, "Đóng tất cả", khởi động lại máy đều không ảnh hưởng. Chỉ cần **không bấm "Buộc dừng"** trong Cài đặt → Ứng dụng.
+Ngoài ra app có "người gác" chạy khoảng 15 phút một lần và sau khi bật máy, để xin kết nối lại dịch vụ nếu bị Samsung ngắt và **đọc to cảnh báo** nếu mất quyền quan trọng hoặc Trợ năng / dịch vụ đọc thông báo bị ngắt (vấn đề mới báo ngay, vấn đề cũ nhắc lại mỗi 6 tiếng). Vuốt tắt app, "Đóng tất cả", khởi động lại máy đều không ảnh hưởng. Chỉ cần **không bấm "Buộc dừng"** trong Cài đặt → Ứng dụng.
 
 ## Giới hạn đã biết
 
 - Bật loa trong Zalo/WhatsApp dựa vào việc tìm nút "Loa" trên màn hình cuộc gọi. Nếu Zalo/WhatsApp đổi giao diện sau một lần cập nhật, có thể không bật được loa (app vẫn nghe máy được và sẽ nói "hãy áp máy lên tai"). Có thể tắt tự cập nhật Zalo/WhatsApp trong Play Store.
 - Khi đang trong một cuộc gọi mà có cuộc gọi chờ, app chỉ đọc tên người gọi (micro đang bận).
 - Nhận dạng giọng nói offline chỉ hiểu các lệnh cố định và tên có trong danh bạ, không hiểu câu tự do.
-- Khi máy để chế độ rung/im lặng: app **vẫn đọc tên người gọi và tin nhắn** (người khiếm thị không nhìn thấy máy đang im lặng). Muốn yên tĩnh ban đêm thì bật "giờ yên tĩnh" trong Cài đặt Trợ Lý.
-- Nhận dạng giọng nói chỉ chấp nhận câu ngắn gồm toàn từ của một lệnh ("nghe", "nghe máy", "không", "từ chối"...). Tiếng ồn, tiếng TV, người xung quanh nói chuyện bị bỏ qua.
+- Khi máy để chế độ rung/im lặng: app **vẫn đọc tên người gọi và tin nhắn** (người khiếm thị không nhìn thấy máy đang im lặng). Giờ yên tĩnh ban đêm mặc định bật; có thể tắt trong Cài đặt Trợ Lý.
+- Âm lượng "Chuông báo" chỉ được kéo lên trong lúc app đang đọc, đọc xong trả lại mức cũ (báo thức đồng hồ không bị to lên).
+- Nhận dạng giọng nói chỉ chấp nhận câu ngắn gồm toàn từ của một lệnh ("nghe", "nghe máy", "không", "từ chối"...), cả ở câu hỏi nghe máy, bước xác nhận "đúng/không" và lệnh giọng nói. Tiếng ồn, tiếng TV, người xung quanh nói chuyện bị bỏ qua.
+- Tin nhắn thoại Zalo chỉ được báo "một tin nhắn thoại", chưa nghe được nội dung. Chưa gọi Zalo/WhatsApp đi bằng giọng nói được (chỉ gọi sim).
 
 ## Cấu trúc code
 

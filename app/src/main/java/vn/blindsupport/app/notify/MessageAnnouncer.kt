@@ -42,7 +42,10 @@ object MessageAnnouncer {
                             heldDuringCall++
                             continue
                         }
-                        if (isQuiet(app)) continue
+                        if (isQuiet(app)) {
+                            Prefs.quietPending = true
+                            continue
+                        }
                         if (item.msg.read) continue
                         Speaker.speak(format(item.msg))
                         MessageStore.markRead(listOf(item.msg))
@@ -75,6 +78,16 @@ object MessageAnnouncer {
         val unread = MessageStore.unreadCount()
         if (unread > 0) {
             enqueueText("Trong lúc gọi, bạn có $unread tin nhắn mới. Giữ phím giảm âm lượng rồi nói: đọc tin nhắn.")
+        }
+    }
+
+    /** Gọi định kỳ: hết giờ yên tĩnh thì nhắc số tin nhắn đến trong lúc yên tĩnh (một lần). */
+    fun remindAfterQuiet(context: Context) {
+        if (!Prefs.quietPending || isQuiet(context) || isBusy(context)) return
+        Prefs.quietPending = false
+        val unread = MessageStore.unreadCount()
+        if (unread > 0) {
+            enqueueText("Trong giờ yên tĩnh, bạn có $unread tin nhắn mới. Giữ phím giảm âm lượng rồi nói: đọc tin nhắn.")
         }
     }
 

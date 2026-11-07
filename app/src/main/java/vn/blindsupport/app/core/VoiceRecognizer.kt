@@ -69,6 +69,17 @@ object VoiceRecognizer {
         loaded
     }
 
+    /**
+     * Các chữ trong [text] mà model nhận dạng không có trong từ điển (nên không bao giờ nghe ra được).
+     * Trả về danh sách rỗng nếu model chưa nạp.
+     */
+    fun unknownWords(text: String): List<String> {
+        val m = model ?: return emptyList()
+        return TextUtils.words(text).filter { w ->
+            runCatching { m.findWord(w) < 0 }.getOrDefault(false)
+        }.distinct()
+    }
+
     fun hasMicPermission(context: Context): Boolean =
         context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 

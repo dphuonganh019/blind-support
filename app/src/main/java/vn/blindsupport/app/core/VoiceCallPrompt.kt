@@ -26,20 +26,31 @@ enum class CallIntent { ANSWER, DECLINE;
         )
         val PHRASES = ANSWER_WORDS + DECLINE_WORDS + FILLER_WORDS
 
+        /**
+         * Khi chuông KHÔNG tắt được (cuộc gọi Zalo / WhatsApp), tiếng chuông lọt vào micro hay bị
+         * nhận thành "có", "ừ", "vâng". Khi đó chỉ nhận những cụm có chữ "nghe" hoặc nói rõ ý.
+         */
+        val STRICT_ANSWER_WORDS = listOf("nghe", "nghe máy", "nghe đi", "bắt máy", "trả lời")
+
         private val ANSWER_SET = ANSWER_WORDS.flatMap { TextUtils.words(it) }.toSet()
+        private val STRICT_ANSWER_SET = STRICT_ANSWER_WORDS.flatMap { TextUtils.words(it) }.toSet()
         private val DECLINE_SET = DECLINE_WORDS.flatMap { TextUtils.words(it) }.toSet()
 
         /**
          * Chỉ nhận khi câu nghe được ngắn (tối đa 3 từ) và MỌI từ đều thuộc cùng một nhóm.
          * Câu lẫn từ khác (thường là tiếng ồn hoặc người xung quanh nói chuyện) bị bỏ qua.
          */
-        fun parse(text: String): CallIntent? {
+        fun parse(text: String, ringerAudible: Boolean = false): CallIntent? {
             val words = TextUtils.words(text)
             if (words.isEmpty() || words.size > 3) return null
             val t = " " + words.joinToString(" ") + " "
             // "không nghe" có chữ "nghe": xét từ chối trước.
             if (words.all { it in DECLINE_SET || it == "nghe" } && DECLINE_WORDS.any { t.contains(" $it ") }) {
                 return DECLINE
+            }
+            if (ringerAudible) {
+                if (words.all { it in STRICT_ANSWER_SET } && STRICT_ANSWER_WORDS.any { t.contains(" $it ") }) return ANSWER
+                return null
             }
             if (words.all { it in ANSWER_SET } && ANSWER_WORDS.any { t.contains(" $it ") }) return ANSWER
             return null
@@ -73,6 +84,9 @@ class VoiceCallPrompt(
         // vô tình gạt sang im lặng mà không biết. Giọng đọc đi qua luồng "Chuông báo" nên vẫn kêu.
         val kind = if (appName != null) "cuộc gọi $appName" else "cuộc gọi"
         var ringerSilenced = false
+        // Giữ micro bằng dịch vụ tiền cảnh trong lúc hỏi, để nghe được câu trả lời kể cả khi
+        // ColorOS không cho màn hình cuộc gọi bật lên. Không bật được thì vẫn chạy như cũ.
+        val micHeld = Prefs.voiceAnswer && MicForegroundService.start(context)
         try {
             if (Prefs.voiceAnswer) {
                 ringerSilenced = silenceRinger?.invoke() == true
@@ -92,11 +106,12 @@ class VoiceCallPrompt(
 
                 Beeper.beep()
                 if (!isRinging()) return
+                val audible = !ringerSilenced
                 val heard = VoiceRecognizer.listen(context, CallIntent.PHRASES, 7_000) {
-                    CallIntent.parse(it) != null
+                    CallIntent.parse(it, audible) != null
                 }
                 if (!isRinging()) return
-                when (heard?.let { CallIntent.parse(it) }) {
+                when (heard?.let { CallIntent.parse(it, audible) }) {
                     CallIntent.ANSWER -> {
                         Speaker.speak("Nghe máy.")
                         if (isRinging()) onAnswer()
@@ -125,6 +140,7 @@ class VoiceCallPrompt(
             }
         } finally {
             RingVolumeGuard.restore(context)
+            if (micHeld) MicForegroundService.stop(context)
         }
     }
 }

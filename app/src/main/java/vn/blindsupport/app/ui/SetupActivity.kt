@@ -21,7 +21,10 @@ import android.widget.Switch
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import vn.blindsupport.app.core.ContactsRepo
 import vn.blindsupport.app.App
 import vn.blindsupport.app.core.HealthCheck
 import vn.blindsupport.app.core.Prefs
@@ -37,6 +40,32 @@ import vn.blindsupport.app.notify.BlindNotificationListener
 class SetupActivity : ComponentActivity() {
 
     private lateinit var checks: LinearLayout
+    private lateinit var unknownNames: LinearLayout
+
+    /**
+     * Liệt kê tên danh bạ có chữ mà bộ nhận dạng giọng nói không biết (ví dụ tên tiếng Anh):
+     * những người này không gọi được bằng giọng nói. Người hỗ trợ nên đổi tên trong danh bạ.
+     */
+    private fun renderUnknownNames() {
+        unknownNames.removeAllViews()
+        lifecycleScope.launch {
+            val contacts = withContext(Dispatchers.IO) { ContactsRepo.allContacts(this@SetupActivity) }
+            val bad = contacts.mapNotNull { c ->
+                val unknown = VoiceRecognizer.unknownWords(c.normalizedName)
+                if (unknown.isEmpty()) null else c.name to unknown
+            }
+            if (bad.isEmpty()) return@launch
+            unknownNames.addView(note(
+                "⚠️ ${bad.size} tên trong danh bạ KHÔNG gọi được bằng giọng nói vì bộ nhận dạng không biết chữ " +
+                    "(thường là tên tiếng Anh, tên viết tắt). Hãy đổi tên trong danh bạ sang chữ tiếng Việt đơn giản, " +
+                    "ví dụ \"Chloe\" → \"Con Gái\":"
+            ))
+            for ((name, words) in bad.take(30)) {
+                unknownNames.addView(note("   • $name  (không biết: ${words.joinToString(", ")})"))
+            }
+            if (bad.size > 30) unknownNames.addView(note("   … và ${bad.size - 30} tên khác."))
+        }
+    }
     private lateinit var loudnessLabel: TextView
 
     private fun renderLoudness() {
@@ -73,6 +102,8 @@ class SetupActivity : ComponentActivity() {
         col.addView(heading("1. Quyền và trạng thái"))
         checks = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         col.addView(checks)
+        unknownNames = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        col.addView(unknownNames)
         col.addView(button("Cấp tất cả quyền cơ bản") { requestPermissions(runtimePermissions, 10) })
         col.addView(note(
             "Nếu Samsung không cho bật \"Quyền đọc thông báo\" hoặc \"Hỗ trợ tiếp cận\" (báo là cài đặt bị hạn chế): " +
@@ -134,7 +165,7 @@ class SetupActivity : ComponentActivity() {
         col.addView(toggle("Đọc nội dung tin (tắt: chỉ đọc tên người gửi)", Prefs.readContent) { Prefs.readContent = it })
         col.addView(toggle("Báo pin yếu / cắm sạc / rút sạc", Prefs.announceBattery) { Prefs.announceBattery = it })
         col.addView(toggle(
-            "Giữ phím GIẢM âm lượng khoảng 2 giây để mở lệnh giọng nói (cần bật Hỗ trợ tiếp cận)",
+            "Giữ phím GIẢM âm lượng khoảng 1,5 giây để mở lệnh giọng nói (cần bật Hỗ trợ tiếp cận)",
             Prefs.volumeKeyTrigger
         ) { Prefs.volumeKeyTrigger = it })
         col.addView(toggle(
@@ -161,8 +192,9 @@ class SetupActivity : ComponentActivity() {
         checks.removeAllViews()
         lifecycleScope.launch {
             VoiceRecognizer.ensureModel(this@SetupActivity)
+            Speaker.refreshOfflineVoice()
             checks.removeAllViews()
-            for (item in HealthCheck.run(this@SetupActivity)) {
+            for (item in HealthCheck.run(this@SetupActivity) + HealthCheck.deadServices(this@SetupActivity)) {
                 val row = LinearLayout(this@SetupActivity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -185,6 +217,7 @@ class SetupActivity : ComponentActivity() {
             if (!BlindNotificationListener.connected && HealthCheck.isNotificationListenerEnabled(this@SetupActivity)) {
                 checks.addView(note("⚠️ Đã cấp quyền đọc thông báo nhưng dịch vụ chưa chạy. Hãy tắt rồi bật lại quyền này, hoặc khởi động lại máy."))
             }
+            renderUnknownNames()
         }
     }
 
@@ -210,7 +243,8 @@ class SetupActivity : ComponentActivity() {
                 } else Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                 if (!open(i)) open(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
             }
-            "a11y" -> open(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            "a11y", "a11y_dead" -> open(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            "listener_dead" -> open(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
             "overlay" -> open(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, pkgUri))
             "battery" -> {
                 @Suppress("BatteryLife")
@@ -229,7 +263,7 @@ class SetupActivity : ComponentActivity() {
                     open(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, pkgUri))
                 }
             }
-            "tts" -> {
+            "tts", "tts_offline" -> {
                 if (!open(Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA))) {
                     open(Intent("com.android.settings.TTS_SETTINGS"))
                 }

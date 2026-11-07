@@ -48,9 +48,10 @@ object Prefs {
         get() = bool("voice_answer", true)
         set(v) = setBool("voice_answer", v)
 
-    // Giờ yên tĩnh: không đọc tin nhắn, vẫn báo cuộc gọi
+    // Giờ yên tĩnh: không đọc tin nhắn, vẫn báo cuộc gọi. Mặc định BẬT (22h–6h) để tin Zalo
+    // lúc nửa đêm không đọc to; tin vẫn được lưu để sáng ra nói "đọc tin nhắn".
     var quietHours: Boolean
-        get() = bool("quiet_hours", false)
+        get() = bool("quiet_hours", true)
         set(v) = setBool("quiet_hours", v)
     var quietStart: Int
         get() = sp.getInt("quiet_start", 22)
@@ -58,6 +59,11 @@ object Prefs {
     var quietEnd: Int
         get() = sp.getInt("quiet_end", 6)
         set(v) = sp.edit().putInt("quiet_end", v).apply()
+
+    /** Có tin nhắn đến trong giờ yên tĩnh mà chưa đọc to: hết giờ yên tĩnh thì nhắc một lần. */
+    var quietPending: Boolean
+        get() = bool("quiet_pending", false)
+        set(v) = setBool("quiet_pending", v)
 
     var announceBattery: Boolean
         get() = bool("announce_battery", true)

@@ -4,10 +4,12 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioFormat
+import android.media.AudioManager
 import android.media.AudioTrack
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.speech.tts.Voice
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -50,6 +52,13 @@ object Speaker {
     /** true nếu engine hiện tại có giọng tiếng Việt dùng được. */
     @Volatile var vietnameseAvailable = false
         private set
+    /**
+     * true nếu giọng tiếng Việt đang dùng đã tải về máy (đọc được khi mất mạng).
+     * Chỉ kiểm tra "đặt được ngôn ngữ" là không đủ: giọng Google có thể chỉ có bản cần mạng.
+     */
+    @Volatile var vietnameseOffline = false
+        private set
+    private val failed: MutableSet<String> = ConcurrentHashMap.newKeySet()
     @Volatile var engineName: String? = null
         private set
 
@@ -85,6 +94,7 @@ object Speaker {
                 return@initListener
             }
             vietnameseAvailable = ok
+            vietnameseOffline = ok && t != null && pickOfflineVoice(t)
             engineName = t?.defaultEngine
             tts = t
             ready.complete(status == TextToSpeech.SUCCESS)
@@ -92,13 +102,39 @@ object Speaker {
         if (tts == null) tts = instance
     }
 
+    /** Kiểm tra lại giọng đọc (ví dụ sau khi người hỗ trợ vừa tải giọng tiếng Việt về máy). */
+    fun refreshOfflineVoice() {
+        val t = tts ?: return
+        if (vietnameseAvailable) vietnameseOffline = pickOfflineVoice(t)
+    }
+
+    private fun isOffline(v: Voice): Boolean =
+        !v.isNetworkConnectionRequired &&
+            TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED !in (v.features ?: emptySet<String>())
+
+    /** Chọn một giọng tiếng Việt đã có trên máy. Trả về false nếu không có giọng nào như vậy. */
+    private fun pickOfflineVoice(t: TextToSpeech): Boolean = runCatching {
+        val current = t.voice
+        if (current != null && current.locale.language == "vi" && isOffline(current)) return@runCatching true
+        val best = t.voices.orEmpty()
+            .filter { it.locale.language == "vi" && isOffline(it) }
+            .maxByOrNull { it.quality }
+            ?: return@runCatching false
+        t.setVoice(best) == TextToSpeech.SUCCESS
+    }.getOrDefault(false)
+
     private val progressListener = object : UtteranceProgressListener() {
         override fun onStart(utteranceId: String?) {}
         override fun onDone(utteranceId: String?) { finish(utteranceId) }
         @Deprecated("Deprecated in Java")
-        override fun onError(utteranceId: String?) { finish(utteranceId) }
-        override fun onError(utteranceId: String?, errorCode: Int) { finish(utteranceId) }
+        override fun onError(utteranceId: String?) { fail(utteranceId) }
+        override fun onError(utteranceId: String?, errorCode: Int) { fail(utteranceId) }
         override fun onStop(utteranceId: String?, interrupted: Boolean) { finish(utteranceId) }
+    }
+
+    private fun fail(id: String?) {
+        if (id != null) failed.add(id)
+        finish(id)
     }
 
     private fun finish(id: String?) {
@@ -112,22 +148,68 @@ object Speaker {
     suspend fun speak(text: String): Boolean {
         if (text.isBlank()) return true
         return mutex.withLock {
+            if (!::appContext.isInitialized) return@withLock false
             val ok = withTimeoutOrNull(8_000) { ready.await() } ?: false
             val t = tts
-            if (!ok || t == null) return@withLock false
-            t.setSpeechRate(Prefs.speechRate)
-            AppVolume.applyVoiceVolume(appContext)
-
-            val boosted = try {
-                speakBoosted(t, text)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.w(TAG, "Khuếch đại lỗi, đọc trực tiếp", e)
-                false
+            withVoiceVolume {
+                if (!ok || t == null) {
+                    errorTone()
+                    return@withVoiceVolume false
+                }
+                t.setSpeechRate(Prefs.speechRate)
+                val boosted = try {
+                    speakBoosted(t, text)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Khuếch đại lỗi, đọc trực tiếp", e)
+                    false
+                }
+                val spoken = boosted || speakDirect(t, text)
+                // Không đọc được (thường do giọng đọc cần mạng mà máy đang mất mạng): phát tiếng
+                // bíp báo lỗi để người dùng biết, thay vì im lặng hoàn toàn.
+                if (!spoken) errorTone()
+                spoken
             }
-            boosted || speakDirect(t, text)
         }
+    }
+
+    /**
+     * Đặt âm lượng "Chuông báo" theo cài đặt của app trong lúc đọc, xong thì trả lại mức cũ,
+     * để báo thức đồng hồ không bị kéo lên tối đa.
+     */
+    private suspend fun <T> withVoiceVolume(block: suspend () -> T): T {
+        val am = appContext.getSystemService(AudioManager::class.java)
+        val before = am?.let { runCatching { it.getStreamVolume(AudioManager.STREAM_ALARM) }.getOrNull() }
+        AppVolume.applyVoiceVolume(appContext)
+        try {
+            return block()
+        } finally {
+            if (am != null && before != null) {
+                runCatching { am.setStreamVolume(AudioManager.STREAM_ALARM, before, 0) }
+            }
+        }
+    }
+
+    /** Ba tiếng "tít" ngắn, cao: báo giọng đọc bị lỗi. */
+    private suspend fun errorTone() {
+        val sr = 22050
+        val pip = sr / 8 // 125 ms
+        val gap = sr / 10
+        val total = pip * 3 + gap * 2
+        val samples = ShortArray(total) { i ->
+            val k = i % (pip + gap)
+            if (k >= pip) 0.toShort() else {
+                val t = k.toDouble() / sr
+                val env = when {
+                    k < 100 -> k / 100.0
+                    k > pip - 100 -> (pip - k) / 100.0
+                    else -> 1.0
+                }
+                (kotlin.math.sin(2 * Math.PI * 1320.0 * t) * env * 0.9 * 32767).toInt().toShort()
+            }
+        }
+        runCatching { play(Pcm(samples, sr, 1)) }
     }
 
     private suspend fun speakBoosted(t: TextToSpeech, text: String): Boolean {
@@ -155,6 +237,7 @@ object Speaker {
             return play(pcm)
         } finally {
             pending.remove(id)
+            failed.remove(id)
             runCatching { file.delete() }
         }
     }
@@ -201,16 +284,20 @@ object Speaker {
             pending.remove(id)
             return false
         }
+        var timedOut = false
         // Ước lượng thời gian đọc tối đa để không bao giờ treo nếu engine không báo xong.
         val maxMs = 4_000L + text.length * 140L
         try {
-            withTimeoutOrNull(maxMs) { done.await() }
+            timedOut = withTimeoutOrNull(maxMs) { done.await() } == null
         } catch (e: CancellationException) {
             runCatching { t.stop() }
             throw e
         } finally {
             pending.remove(id)
         }
+        // Engine báo lỗi (onError) = không đọc được, kể cả khi lệnh speak() đã nhận.
+        if (failed.remove(id)) return false
+        if (timedOut) Log.w(TAG, "Engine không báo đọc xong")
         return true
     }
 
@@ -220,7 +307,10 @@ object Speaker {
      */
     suspend fun longBeep(durationMs: Int): Boolean = mutex.withLock {
         if (!::appContext.isInitialized) return@withLock false
-        AppVolume.applyVoiceVolume(appContext)
+        withVoiceVolume { longBeepLocked(durationMs) }
+    }
+
+    private suspend fun longBeepLocked(durationMs: Int): Boolean {
         val sr = 22050
         val n = sr * durationMs / 1000
         val fade = sr / 50 // 20 ms
@@ -236,7 +326,7 @@ object Speaker {
             }
             (s * env * 0.97 * 32767).toInt().toShort()
         }
-        runCatching { play(Pcm(samples, sr, 1)) }.getOrDefault(false)
+        return runCatching { play(Pcm(samples, sr, 1)) }.getOrDefault(false)
     }
 
     /** Dừng câu đang đọc (ví dụ khi có cuộc gọi đến cắt ngang việc đọc tin nhắn). */

@@ -20,6 +20,9 @@
     <!-- Chạy ổn định ngầm -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Giữ micro trong lúc hỏi "nghe hay không" khi app chạy nền -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <!-- Cần để thấy Zalo/WhatsApp/ứng dụng tin nhắn trên Android 11+ -->
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"
@@ -173,6 +176,11 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_config" />
         </service>
+
+        <service
+            android:name=".core.MicForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
 
         <service
             android:name=".WatchdogJob"

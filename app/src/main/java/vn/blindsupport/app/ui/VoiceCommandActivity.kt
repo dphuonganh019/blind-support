@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.BatteryManager
 import android.os.Bundle
 import android.telecom.TelecomManager
+import android.view.KeyEvent
 import android.widget.Button
 import android.widget.TextView
 import androidx.activity.ComponentActivity
@@ -35,6 +36,11 @@ import vn.blindsupport.app.voip.VoipCallController
  * Mở lên là: đọc cảnh báo (nếu có) → "Mời nói" → bíp → nghe lệnh → làm → tự đóng.
  */
 class VoiceCommandActivity : ComponentActivity() {
+
+    private companion object {
+        /** Tin nhóm thường rất nhiều: mỗi lần chỉ đọc tối đa chừng này tin gần nhất. */
+        const val MAX_GROUP_READ = 10
+    }
 
     private lateinit var statusView: TextView
     private var sessionJob: Job? = null
@@ -73,6 +79,25 @@ class VoiceCommandActivity : ComponentActivity() {
         startSession()
     }
 
+    /** Phím giảm âm lượng (khi trợ năng không giữ phím lại): dừng đọc. */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN && sessionJob?.isActive == true) {
+            stopReading()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    private fun stopReading() {
+        if (sessionJob?.isActive != true) return
+        sessionJob?.cancel()
+        Speaker.stop()
+        lifecycleScope.launch {
+            Speaker.speak("Đã dừng.")
+            finish()
+        }
+    }
+
     override fun onPause() {
         super.onPause()
         if (!isChangingConfigurations) {
@@ -83,6 +108,7 @@ class VoiceCommandActivity : ComponentActivity() {
 
     override fun onDestroy() {
         VoiceSession.active = false
+        VoiceSession.onStopRequested = null
         super.onDestroy()
     }
 
@@ -95,11 +121,13 @@ class VoiceCommandActivity : ComponentActivity() {
         }
         sessionJob = lifecycleScope.launch {
             VoiceSession.active = true
+            VoiceSession.onStopRequested = { runOnUiThread { stopReading() } }
             Speaker.stop()
             try {
                 runSession()
             } finally {
                 VoiceSession.active = false
+                VoiceSession.onStopRequested = null
             }
         }
     }
@@ -157,6 +185,7 @@ class VoiceCommandActivity : ComponentActivity() {
                 }
             }
             Command.ReadMessages -> readMessages()
+            Command.ReadGroupMessages -> readGroupMessages()
             Command.MissedCalls -> {
                 val list = withContext(Dispatchers.IO) { ContactsRepo.recentMissedCalls(this@VoiceCommandActivity) }
                 if (list.isEmpty()) {
@@ -226,6 +255,31 @@ class VoiceCommandActivity : ComponentActivity() {
             delay(300)
         }
         Speaker.speak("Hết tin nhắn mới.")
+        val groups = MessageStore.unreadGroupCount()
+        if (groups > 0) Speaker.speak("Có $groups tin nhắn nhóm chưa nghe. Muốn nghe thì nói: tin nhóm.")
+    }
+
+    private suspend fun readGroupMessages() {
+        val unread = MessageStore.unreadGroups()
+        if (unread.isEmpty()) {
+            Speaker.speak("Không có tin nhắn nhóm mới.")
+            return
+        }
+        val list = unread.takeLast(MAX_GROUP_READ)
+        // Tin cũ hơn số tin sẽ đọc: coi như đã nghe để lần sau không đọc lại từ đầu.
+        MessageStore.markRead(unread.dropLast(list.size))
+        Speaker.speak(
+            if (unread.size > list.size) "Có ${unread.size} tin nhắn nhóm mới. Đọc ${list.size} tin gần nhất. " +
+                "Bấm phím giảm âm lượng để dừng."
+            else "Có ${unread.size} tin nhắn nhóm mới. Bấm phím giảm âm lượng để dừng."
+        )
+        for (m in list) {
+            status(m.sender)
+            Speaker.speak(MessageAnnouncer.format(m))
+            MessageStore.markRead(listOf(m))
+            delay(300)
+        }
+        Speaker.speak("Hết tin nhắn nhóm.")
     }
 
     private suspend fun confirmAndCall(name: String, number: String) {
@@ -237,9 +291,7 @@ class VoiceCommandActivity : ComponentActivity() {
                 else "Hãy nói: đúng, hoặc: không, sau tiếng bíp."
             )
             Beeper.beep()
-            val ans = VoiceRecognizer.listen(this, CommandParser.CONFIRM_YES + CommandParser.CONFIRM_NO, 7_000) {
-                CommandParser.isYes(it) || CommandParser.isNo(it)
-            } ?: continue
+            val ans = VoiceRecognizer.listen(this, Confirm.PHRASES, 7_000) { Confirm.parse(it) != null } ?: continue
             if (CommandParser.isYes(ans)) {
                 placeCall(number, spokenName)
                 return
@@ -279,9 +331,7 @@ class VoiceCommandActivity : ComponentActivity() {
             val spoken = TextUtils.speakableNumber(digits)
             Speaker.speak("Số bạn đọc là: $spoken. Gọi số này, phải không? Hãy nói: đúng, hoặc: không, sau tiếng bíp.")
             Beeper.beep()
-            val ans = VoiceRecognizer.listen(this, CommandParser.CONFIRM_YES + CommandParser.CONFIRM_NO, 7_000) {
-                CommandParser.isYes(it) || CommandParser.isNo(it)
-            }
+            val ans = VoiceRecognizer.listen(this, Confirm.PHRASES, 7_000) { Confirm.parse(it) != null }
             when {
                 ans != null && CommandParser.isYes(ans) -> {
                     placeCall(digits, "số $spoken")

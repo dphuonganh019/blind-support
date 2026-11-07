@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.PowerManager
+import android.os.Process
+import android.os.SystemClock
 import android.provider.Settings
 import vn.blindsupport.app.a11y.BlindAccessibilityService
 import vn.blindsupport.app.notify.BlindNotificationListener
@@ -51,9 +53,12 @@ object HealthCheck {
             "listener", "Quyền đọc thông báo (tin Zalo, WhatsApp, SMS)", isNotificationListenerEnabled(context), true,
             "chưa có quyền đọc thông báo, nên không đọc được tin nhắn Zalo và không báo được cuộc gọi Zalo"
         )
+        // Trợ năng là cách DUY NHẤT để mở lệnh giọng nói trên Oppo (giữ phím giảm âm lượng),
+        // và ColorOS hay tự tắt nó khi dọn dẹp máy: phải cảnh báo bằng giọng nói.
         list += Item(
-            "a11y", "Hỗ trợ tiếp cận (bấm loa Zalo/WhatsApp)", isAccessibilityEnabled(context), false,
-            "chưa bật trợ năng, nên không tự bật được loa ngoài trong cuộc gọi Zalo"
+            "a11y", "Hỗ trợ tiếp cận / Trợ năng (giữ phím giảm âm lượng, bấm loa Zalo)", isAccessibilityEnabled(context), true,
+            "bị tắt Trợ năng, nên giữ phím giảm âm lượng sẽ không mở được lệnh giọng nói, " +
+                "và không tự bật được loa ngoài trong cuộc gọi Zalo"
         )
         list += Item(
             "overlay", "Hiển thị trên ứng dụng khác", Settings.canDrawOverlays(context), false,
@@ -75,6 +80,14 @@ object HealthCheck {
             "tts", "Giọng đọc tiếng Việt", Speaker.vietnameseAvailable, true,
             "chưa có giọng đọc tiếng Việt"
         )
+        if (Speaker.vietnameseAvailable) {
+            // Chưa tải giọng về máy thì khi mất mạng app sẽ im lặng (chỉ còn tiếng bíp báo lỗi).
+            list += Item(
+                "tts_offline", "Giọng đọc tiếng Việt đã tải về máy (đọc được khi mất mạng)",
+                Speaker.vietnameseOffline, false,
+                "chưa tải giọng đọc tiếng Việt về máy, nên khi mất mạng sẽ không đọc được"
+            )
+        }
         list += Item(
             "model", "Bộ nhận dạng giọng nói offline", VoiceRecognizer.isModelLoaded, true,
             "bộ nhận dạng giọng nói chưa sẵn sàng"
@@ -126,11 +139,39 @@ object HealthCheck {
         return nm.canUseFullScreenIntent()
     }
 
-    /** Câu cảnh báo đọc to cho người dùng nếu thiếu thứ quan trọng, hoặc null nếu mọi thứ ổn. */
-    fun spokenProblems(context: Context): String? {
-        val bad = run(context).filter { it.critical && !it.ok && it.key != "model" }
-        if (bad.isEmpty()) return null
-        return "Cảnh báo: ứng dụng " + bad.joinToString("; ") { it.spokenWarning } +
-            ". Hãy nhờ người hỗ trợ mở mục Cài đặt Trợ Lý."
+    /**
+     * Dịch vụ đã được bật trong Cài đặt nhưng hiện KHÔNG chạy (ColorOS/Samsung ngắt giữa chừng).
+     * Chỉ đọc cài đặt bật/tắt là không đủ: công tắc vẫn bật mà dịch vụ đã chết.
+     * Bỏ qua khi tiến trình app vừa khởi động (dưới 30 giây), vì hệ thống chưa kịp kết nối lại dịch vụ.
+     */
+    fun deadServices(context: Context): List<Item> {
+        if (SystemClock.uptimeMillis() - Process.getStartUptimeMillis() < 30_000L) return emptyList()
+        val list = mutableListOf<Item>()
+        if (isAccessibilityEnabled(context) && BlindAccessibilityService.instance == null) {
+            list += Item(
+                "a11y_dead", "Trợ năng đã bật nhưng không chạy", false, true,
+                "bị hệ thống ngắt Trợ năng, nên giữ phím giảm âm lượng sẽ không mở được lệnh giọng nói"
+            )
+        }
+        if (isNotificationListenerEnabled(context) && !BlindNotificationListener.connected) {
+            list += Item(
+                "listener_dead", "Quyền đọc thông báo đã bật nhưng dịch vụ không chạy", false, true,
+                "bị hệ thống ngắt dịch vụ đọc thông báo, nên không đọc được tin nhắn Zalo và không báo được cuộc gọi Zalo"
+            )
+        }
+        return list
     }
+
+    /** Câu cảnh báo đọc to từ danh sách vấn đề, hoặc null nếu danh sách rỗng. */
+    fun spokenWarning(bad: List<Item>): String? {
+        if (bad.isEmpty()) return null
+        val a11y = bad.any { it.key == "a11y" || it.key == "a11y_dead" }
+        return "Cảnh báo: ứng dụng " + bad.joinToString("; ") { it.spokenWarning } + ". " +
+            (if (a11y) "Bạn vẫn nghe được cuộc gọi đến như thường. " else "") +
+            "Hãy nhờ người hỗ trợ mở mục Cài đặt Trợ Lý để bật lại."
+    }
+
+    /** Câu cảnh báo đọc to cho người dùng nếu thiếu thứ quan trọng, hoặc null nếu mọi thứ ổn. */
+    fun spokenProblems(context: Context): String? =
+        spokenWarning(run(context).filter { it.critical && !it.ok && it.key != "model" } + deadServices(context))
 }

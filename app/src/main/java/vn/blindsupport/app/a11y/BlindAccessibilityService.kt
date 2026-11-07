@@ -17,6 +17,7 @@ import vn.blindsupport.app.core.AudioState
 import vn.blindsupport.app.core.Prefs
 import vn.blindsupport.app.core.TextUtils
 import vn.blindsupport.app.ui.VoiceCommandActivity
+import vn.blindsupport.app.ui.VoiceSession
 import vn.blindsupport.app.voip.VoipCallController
 
 /**
@@ -81,6 +82,12 @@ class BlindAccessibilityService : AccessibilityService() {
                 tracking = false
                 triggered = false
                 if (!wasTriggered) {
+                    // Bấm nhanh khi app đang đọc trong màn nghe lệnh (ví dụ đọc tin nhắn): dừng đọc.
+                    val stop = VoiceSession.onStopRequested
+                    if (VoiceSession.active && stop != null) {
+                        runCatching { stop() }
+                        return true
+                    }
                     // Bấm nhanh: giảm âm lượng như bình thường (vì app đã giữ lại phím này).
                     runCatching {
                         getSystemService(AudioManager::class.java)?.adjustSuggestedStreamVolume(
@@ -101,17 +108,30 @@ class BlindAccessibilityService : AccessibilityService() {
         if (CallManager.calls().isNotEmpty() || VoipCallController.isRinging() || AudioState.inAnyCall(this)) {
             return false
         }
-        // Màn hình tắt: không can thiệp.
-        val pm = getSystemService(PowerManager::class.java)
-        if (pm != null && !pm.isInteractive) return false
+        // Màn hình tắt vẫn nhận: người khiếm thị không biết màn đang tắt hay sáng. Giữ đủ lâu
+        // (mặc định 1,5 giây) mới mở lệnh nên không sợ chạm nhầm trong túi.
         return true
     }
 
     private fun openVoiceCommand() {
         vibrate()
+        wakeScreen()
         val i = Intent(this, VoiceCommandActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         runCatching { startActivity(i) }
+    }
+
+    /** Bật sáng màn hình nếu đang tắt, để màn nghe lệnh hiện được lên trên màn khóa. */
+    @Suppress("DEPRECATION")
+    private fun wakeScreen() {
+        val pm = getSystemService(PowerManager::class.java) ?: return
+        if (pm.isInteractive) return
+        runCatching {
+            pm.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                "TroLyNgheGoi:wake"
+            ).acquire(3_000L)
+        }
     }
 
     private fun vibrate() {

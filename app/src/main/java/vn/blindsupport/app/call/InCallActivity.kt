@@ -18,7 +18,8 @@ import vn.blindsupport.app.ui.BigUi
 
 /**
  * Màn hình cuộc gọi sim.
- * - Đang đổ chuông: nửa trên NGHE (xanh), nửa dưới TỪ CHỐI (đỏ). Phím tăng âm lượng = nghe, giảm = từ chối.
+ * - Đang đổ chuông: nửa trên NGHE (xanh), nửa dưới TỪ CHỐI (đỏ). Phím tăng âm lượng = nghe,
+ *   phím giảm âm lượng = chỉ tắt chuông (KHÔNG từ chối, tránh bấm nhầm khi muốn vặn nhỏ).
  * - Đang gọi: nửa trên bật/tắt loa, nửa dưới GIỮ để kết thúc (giữ lâu để tránh chạm nhầm).
  */
 class InCallActivity : ComponentActivity() {

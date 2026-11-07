@@ -179,7 +179,7 @@ object NotificationParser {
                 val text = m.text.toString()
                 if (seenRecently(pkg, sender, text, now)) continue
                 val senderLabel = if (group && groupTitle != null) "nhóm $groupTitle, $sender" else sender
-                out += StoredMessage(app, senderLabel, text, m.timestamp, false) to group
+                out += StoredMessage(app, senderLabel, text, m.timestamp, false, group) to group
             }
             return out
         }
@@ -193,7 +193,7 @@ object NotificationParser {
         val norm = TextUtils.normalize(text)
         if (Regex("^\\d+ (tin nhắn mới|new messages)").containsMatchIn(norm)) return emptyList()
         val isGroup = Regex("^.+: ").containsMatchIn(text) && pkg in AppIds.VOIP
-        out += StoredMessage(app, title, text, now, false) to isGroup
+        out += StoredMessage(app, title, text, now, false, isGroup) to isGroup
         return out
     }
 

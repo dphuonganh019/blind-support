@@ -10,11 +10,17 @@ data class StoredMessage(
     val text: String,
     val time: Long,
     var read: Boolean,
+    /** Tin trong nhóm chat: lưu riêng, không lẫn vào "đọc tin nhắn". */
+    val group: Boolean = false,
 )
 
-/** Lưu khoảng 40 tin nhắn gần nhất để người dùng nói "đọc tin nhắn" nghe lại. */
+/**
+ * Lưu tin nhắn gần nhất để người dùng nghe lại: 40 tin cá nhân ("đọc tin nhắn") và 40 tin nhóm
+ * ("tin nhóm") giữ riêng, để tin nhóm dồn dập không đẩy mất tin của con cháu.
+ */
 object MessageStore {
     private const val MAX = 40
+    private const val MAX_GROUP = 40
     private val items = ArrayList<StoredMessage>()
     private var loaded = false
 
@@ -28,7 +34,7 @@ object MessageStore {
                 val o = arr.getJSONObject(i)
                 items += StoredMessage(
                     o.optString("app"), o.optString("sender"), o.optString("text"),
-                    o.optLong("time"), o.optBoolean("read")
+                    o.optLong("time"), o.optBoolean("read"), o.optBoolean("group", o.optString("sender").startsWith("nhóm ")) // tin lưu từ bản cũ
                 )
             }
         }
@@ -37,18 +43,29 @@ object MessageStore {
     @Synchronized
     fun add(msg: StoredMessage) {
         items += msg
-        while (items.size > MAX) items.removeAt(0)
+        val cap = if (msg.group) MAX_GROUP else MAX
+        while (items.count { it.group == msg.group } > cap) {
+            items.removeAt(items.indexOfFirst { it.group == msg.group })
+        }
         save()
     }
 
+    /** Tin cá nhân chưa nghe (không gồm tin nhóm). */
     @Synchronized
-    fun unread(): List<StoredMessage> = items.filter { !it.read }
+    fun unread(): List<StoredMessage> = items.filter { !it.read && !it.group }
 
     @Synchronized
-    fun latest(n: Int): List<StoredMessage> = items.takeLast(n)
+    fun unreadGroups(): List<StoredMessage> = items.filter { !it.read && it.group }
+
+    /** Các tin cá nhân gần nhất. */
+    @Synchronized
+    fun latest(n: Int): List<StoredMessage> = items.filter { !it.group }.takeLast(n)
 
     @Synchronized
-    fun unreadCount(): Int = items.count { !it.read }
+    fun unreadCount(): Int = items.count { !it.read && !it.group }
+
+    @Synchronized
+    fun unreadGroupCount(): Int = items.count { !it.read && it.group }
 
     @Synchronized
     fun markRead(list: Collection<StoredMessage>) {
@@ -68,7 +85,7 @@ object MessageStore {
             arr.put(
                 JSONObject()
                     .put("app", it.app).put("sender", it.sender).put("text", it.text)
-                    .put("time", it.time).put("read", it.read)
+                    .put("time", it.time).put("read", it.read).put("group", it.group)
             )
         }
         Prefs.messagesJson = arr.toString()
