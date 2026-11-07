@@ -78,7 +78,7 @@ class BlindNotificationListener : NotificationListenerService() {
         if (NotificationParser.isOngoingVoipCall(sbn)) {
             ongoingVoipKeys += sbn.key
             voipCallInProgress = true
-            VoipCallController.onCallInProgress(sbn.key)
+            VoipCallController.onCallInProgress(sbn.key, sbn.notification?.contentIntent)
             return
         }
         // 3) Cuộc gọi nhỡ Zalo/WhatsApp
@@ -107,6 +107,7 @@ class BlindNotificationListener : NotificationListenerService() {
         if (ongoingVoipKeys.remove(sbn.key)) {
             voipCallInProgress = ongoingVoipKeys.isNotEmpty()
             VoipCallController.dismissUi()
+            if (ongoingVoipKeys.isEmpty()) VoipCallController.onCallEnded(this)
             MessageAnnouncer.onCallEnded(this)
         }
     }

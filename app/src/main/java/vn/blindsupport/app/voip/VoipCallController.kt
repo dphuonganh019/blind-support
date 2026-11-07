@@ -14,6 +14,7 @@ import vn.blindsupport.app.App
 import vn.blindsupport.app.a11y.UiClicker
 import vn.blindsupport.app.core.AppVolume
 import vn.blindsupport.app.core.AudioState
+import vn.blindsupport.app.core.CallSpeaker
 import vn.blindsupport.app.core.Prefs
 import vn.blindsupport.app.core.Speaker
 import vn.blindsupport.app.core.TextUtils
@@ -38,6 +39,8 @@ object VoipCallController {
 
     @Volatile var current: VoipCallInfo? = null
         private set
+    /** Bấm vào thông báo "đang trong cuộc gọi" của Zalo: mở lại màn hình cuộc gọi của Zalo. */
+    @Volatile private var ongoingIntent: PendingIntent? = null
     private var promptJob: Job? = null
 
     fun isRinging(): Boolean = _state.value == State.RINGING
@@ -79,7 +82,8 @@ object VoipCallController {
     }
 
     /** Thông báo "đang trong cuộc gọi" của Zalo/WhatsApp xuất hiện. */
-    fun onCallInProgress(key: String) {
+    fun onCallInProgress(key: String, contentIntent: PendingIntent?) {
+        if (contentIntent != null) ongoingIntent = contentIntent
         if (_state.value == State.RINGING) {
             stopPrompt()
             _state.value = State.ANSWERED
@@ -122,13 +126,42 @@ object VoipCallController {
             }
         }
         if (!Prefs.autoSpeaker || AudioState.hasHeadset(context)) return
+        // Cách 1: chuyển âm thanh cuộc gọi sang loa ngoài ở mức hệ thống (không cần giao diện Zalo).
+        // Lặp lại vài lần vì Zalo có thể tự trả về loa trong lúc đang kết nối cuộc gọi.
+        var routed = false
+        val routeJob = App.appScope.launch {
+            for (wait in longArrayOf(1_200, 1_500, 2_000, 3_000, 4_000)) {
+                delay(wait)
+                if (_state.value != State.ANSWERED && !vn.blindsupport.app.notify.BlindNotificationListener.voipCallInProgress) break
+                if (CallSpeaker.force(context)) routed = true
+            }
+        }
+        // Cách 2: nhờ trợ năng bấm nút "Loa" trên màn hình cuộc gọi của Zalo.
         UiClicker.arm(context, info.pkg, UiClicker.SPEAKER_KEYS, 12_000) { ok ->
             if (!ok) {
                 App.appScope.launch {
-                    Speaker.speak("Đã nghe máy. Chưa bật được loa ngoài, hãy áp máy lên tai.")
+                    routeJob.join()
+                    if (!routed) {
+                        Speaker.speak("Đã nghe máy. Chưa bật được loa ngoài, hãy áp máy lên tai.")
+                    }
                 }
             }
         }
+        // Màn hình cuộc gọi Zalo có thể chưa hiện (máy khóa, nghe từ thông báo): mở nó lên để
+        // trợ năng tìm được nút Loa.
+        App.appScope.launch {
+            delay(2_500)
+            val task = UiClicker.pending
+            if (task != null && task.pkg == info.pkg && !task.finished) {
+                ongoingIntent?.let { send(context, it) }
+            }
+        }
+    }
+
+    /** Cuộc gọi Zalo/WhatsApp đã kết thúc. */
+    fun onCallEnded(context: Context) {
+        ongoingIntent = null
+        CallSpeaker.release(context)
     }
 
     fun decline(context: Context) {

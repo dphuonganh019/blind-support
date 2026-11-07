@@ -126,6 +126,11 @@ object Prefs {
         get() = sp.getString("messages_json", "[]") ?: "[]"
         set(v) = sp.edit().putString("messages_json", v).apply()
 
+    /** Cấu trúc màn hình Zalo lần gần nhất không tìm thấy nút (để gửi cho người sửa app). */
+    var lastUiDump: String
+        get() = sp.getString("last_ui_dump", "") ?: ""
+        set(v) = sp.edit().putString("last_ui_dump", v.take(60_000)).apply()
+
     var lastBatteryLevelAnnounced: Int
         get() = sp.getInt("last_battery_announced", 100)
         set(v) = sp.edit().putInt("last_battery_announced", v).apply()

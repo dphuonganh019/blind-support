@@ -4,13 +4,14 @@ import android.content.Context
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import vn.blindsupport.app.App
+import vn.blindsupport.app.core.Prefs
 
 /**
  * "Hẹn" dịch vụ trợ năng bấm một nút trong Zalo/WhatsApp trong một khoảng thời gian ngắn
  * (ví dụ nút Loa ngay sau khi nghe máy). Ngoài khoảng thời gian đó app không đụng vào Zalo.
  */
 object UiClicker {
-    val SPEAKER_KEYS = listOf("loa", "loa ngoài", "speaker", "bật loa", "speakerphone")
+    val SPEAKER_KEYS = listOf("loa", "loa ngoài", "speaker", "bật loa", "speakerphone", "loudspeaker", "spk")
     val ANSWER_KEYS = listOf("trả lời", "nghe", "answer", "accept", "chấp nhận")
     val DECLINE_KEYS = listOf("từ chối", "decline", "reject", "kết thúc", "end call", "hang up")
 
@@ -48,6 +49,12 @@ object UiClicker {
     fun finish(task: Task, ok: Boolean) {
         if (task.finished) return
         task.finished = true
+        if (!ok) {
+            // Không tìm thấy nút: lưu lại cấu trúc màn hình Zalo để người hỗ trợ gửi cho người sửa app.
+            runCatching {
+                BlindAccessibilityService.instance?.dumpWindows(task.pkg, task.keywords)?.let { Prefs.lastUiDump = it }
+            }
+        }
         if (pending === task) pending = null
         task.onDone(ok)
     }

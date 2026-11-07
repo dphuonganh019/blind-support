@@ -186,7 +186,9 @@ class BlindAccessibilityService : AccessibilityService() {
                 if ((node.isCheckable && node.isChecked) || node.isSelected) return Result.ALREADY_ON
                 val label = label(node)
                 if (label.contains(" tắt loa ") || label.contains(" speaker on ")) return Result.ALREADY_ON
-                val target = clickableAncestor(node)
+                // Chữ "Loa" thường nằm dưới một nút hình (biểu tượng) không có chữ: nếu bản thân
+                // nó và các tầng cha đều không bấm được thì bấm nút anh em cạnh nó.
+                val target = clickableAncestor(node) ?: clickableSibling(node)
                 if (target != null && target.isEnabled &&
                     target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                 ) return Result.CLICKED
@@ -211,11 +213,60 @@ class BlindAccessibilityService : AccessibilityService() {
         return normKeys.any { l.contains(it) }
     }
 
+    private fun isClickableNode(n: AccessibilityNodeInfo): Boolean =
+        n.isClickable || n.actionList.any { it.id == AccessibilityNodeInfo.ACTION_CLICK }
+
+    /** Nút bấm được nằm trong cùng nhóm (cùng cha) với [node]. */
+    private fun clickableSibling(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        val parent = node.parent ?: return null
+        val candidates = (0 until parent.childCount).mapNotNull { parent.getChild(it) }
+            .filter { it != node && isClickableNode(it) && it.isEnabled }
+        return candidates.singleOrNull()
+    }
+
+    /**
+     * Ghi lại các nút trên màn hình của [pkg] (chữ, mô tả, mã nút, có bấm được không) để người
+     * sửa app biết nút "Loa" của Zalo trên máy này trông thế nào.
+     */
+    fun dumpWindows(pkg: String, keywords: List<String>): String {
+        val sb = StringBuilder()
+        sb.append("Tìm: ").append(keywords.joinToString(", ")).append('\n')
+        sb.append("Máy: ").append(android.os.Build.MANUFACTURER).append(' ').append(android.os.Build.MODEL)
+            .append(", Android ").append(android.os.Build.VERSION.RELEASE).append('\n')
+        runCatching { packageManager.getPackageInfo(pkg, 0).versionName }.getOrNull()?.let {
+            sb.append(pkg).append(' ').append(it).append('\n')
+        }
+        val roots = mutableListOf<AccessibilityNodeInfo>()
+        runCatching { windows }.getOrNull()?.forEach { w -> w.root?.let { roots += it } }
+        rootInActiveWindow?.let { roots += it }
+        sb.append("Cửa sổ: ").append(roots.joinToString { it.packageName?.toString() ?: "?" }).append('\n')
+        for (root in roots) {
+            if (root.packageName?.toString() != pkg) continue
+            fun walk(n: AccessibilityNodeInfo, depth: Int) {
+                if (sb.length > 50_000 || depth > 30) return
+                val text = n.text?.toString().orEmpty()
+                val desc = n.contentDescription?.toString().orEmpty()
+                val id = n.viewIdResourceName?.substringAfter(":id/").orEmpty()
+                val cls = n.className?.toString()?.substringAfterLast('.').orEmpty()
+                sb.append("  ".repeat(depth.coerceAtMost(12))).append(cls)
+                if (id.isNotEmpty()) sb.append(" #").append(id)
+                if (text.isNotEmpty()) sb.append(" \"").append(text.take(40)).append('"')
+                if (desc.isNotEmpty()) sb.append(" [").append(desc.take(40)).append(']')
+                if (isClickableNode(n)) sb.append(" *bấm")
+                if (n.isCheckable) sb.append(if (n.isChecked) " (bật)" else " (tắt)")
+                sb.append('\n')
+                for (i in 0 until n.childCount) n.getChild(i)?.let { walk(it, depth + 1) }
+            }
+            walk(root, 0)
+        }
+        return sb.toString()
+    }
+
     private fun clickableAncestor(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
         var cur: AccessibilityNodeInfo? = node
         var depth = 0
-        while (cur != null && depth < 4) {
-            if (cur.isClickable) return cur
+        while (cur != null && depth < 6) {
+            if (isClickableNode(cur)) return cur
             cur = cur.parent
             depth++
         }

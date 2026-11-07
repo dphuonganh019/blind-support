@@ -153,6 +153,21 @@ class SetupActivity : ComponentActivity() {
             startActivity(Intent(this, VoiceCommandActivity::class.java))
         })
         col.addView(button("Giả lập cuộc gọi đến (không gọi thật)") { simulateCall() })
+        col.addView(note(
+            "Nếu app báo \"chưa bật được loa ngoài\" khi nghe máy Zalo/WhatsApp: ngay sau cuộc gọi đó, " +
+                "bấm nút dưới đây và gửi nội dung cho người làm app để sửa."
+        ))
+        col.addView(button("Gửi thông tin màn hình Zalo (lỗi loa ngoài)") {
+            val dump = Prefs.lastUiDump
+            if (dump.isBlank()) {
+                lifecycleScope.launch { Speaker.speak("Chưa có thông tin. Hãy thử một cuộc gọi Zalo trước.") }
+            } else {
+                val i = Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_SUBJECT, "Trợ Lý Nghe Gọi ${versionName()} - màn hình Zalo")
+                    .putExtra(Intent.EXTRA_TEXT, dump)
+                open(Intent.createChooser(i, "Gửi qua"))
+            }
+        })
 
         col.addView(heading("3. Tùy chọn"))
         col.addView(toggle("Hỏi \"có muốn nghe không\" và nghe câu trả lời bằng giọng nói", Prefs.voiceAnswer) { Prefs.voiceAnswer = it })
