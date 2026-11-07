@@ -94,7 +94,9 @@ class VoiceCallPrompt(
             // Rung liên tục suốt lúc có cuộc gọi (phòng khi để máy trong túi, nghe kém).
             if (Prefs.vibrateOnCall) startVibration()
             // Để chuông thật của máy reo vài giây trước, cho người nghe kém kịp nhận ra có cuộc gọi.
-            val ringFirstMs = Prefs.ringFirstSeconds * 1000L
+            // Zalo/WhatsApp đổ chuông ngắn hơn cuộc gọi sim: chỉ chờ khoảng 3 giây (app đã chờ sẵn
+            // khoảng 1 giây trước khi bắt đầu hỏi).
+            val ringFirstMs = if (appName != null) 2_000L else Prefs.ringFirstSeconds * 1000L
             var rang = 0L
             while (rang < ringFirstMs && isRinging()) {
                 delay(250)

@@ -149,6 +149,9 @@ object VoipCallController {
         // Lặp lại vài lần vì Zalo có thể tự trả về loa trong lúc đang kết nối cuộc gọi.
         var routed = false
         val routeJob = App.appScope.launch {
+            // Android 12 trở lên: hệ thống ưu tiên lựa chọn của Zalo, lệnh chuyển loa từ app khác không
+            // có tác dụng mà còn làm app tưởng loa đã bật. Chỉ dùng cách bấm nút Loa.
+            if (Build.VERSION.SDK_INT >= 31) return@launch
             for (wait in longArrayOf(1_200, 1_500, 2_000, 3_000, 4_000)) {
                 delay(wait)
                 val active = _state.value == State.ANSWERED ||
@@ -181,6 +184,11 @@ object VoipCallController {
                 ongoingIntent?.let { send(context, it) }
             }
         }
+    }
+
+    /** Mở lại màn hình cuộc gọi của Zalo/WhatsApp (bấm vào thông báo "đang trong cuộc gọi"). */
+    fun bringCallScreen(context: Context) {
+        ongoingIntent?.let { send(context, it) }
     }
 
     /** Cuộc gọi Zalo/WhatsApp đã kết thúc. */

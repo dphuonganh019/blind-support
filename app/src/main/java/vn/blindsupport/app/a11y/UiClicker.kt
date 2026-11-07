@@ -23,6 +23,8 @@ object UiClicker {
         val onDone: (Boolean) -> Unit,
     ) {
         @Volatile var finished = false
+        /** Đã xin mở lại màn hình của ứng dụng (khi không thấy cửa sổ nào của nó). */
+        @Volatile var screenRequested = false
     }
 
     @Volatile var pending: Task? = null

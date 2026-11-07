@@ -116,7 +116,16 @@ class BlindInCallService : InCallService() {
         super.onSilenceRinger()
         // Chính app vừa tắt chuông để đọc tên người gọi: không phải người dùng bấm phím.
         if (System.currentTimeMillis() - CallManager.selfSilencedAt < 2_000L) return
-        val ringing = calls.firstOrNull { it.stateCompat() == Call.STATE_RINGING } ?: return
+        val ringing = calls.firstOrNull { it.stateCompat() == Call.STATE_RINGING }
+        if (ringing == null) {
+            // Không có cuộc gọi sim đổ chuông: có thể là cuộc gọi Zalo/WhatsApp (các ứng dụng này
+            // cũng đăng ký cuộc gọi với Android nên phím bị giữ lại giống cuộc gọi sim).
+            if (vn.blindsupport.app.voip.VoipCallController.isRinging()) {
+                Speaker.stop()
+                vn.blindsupport.app.voip.VoipCallController.answer(this)
+            }
+            return
+        }
         val others = calls.count { it !== ringing && it.stateCompat() != Call.STATE_DISCONNECTED }
         if (others > 0) {
             // Đang có cuộc gọi khác (cuộc gọi chờ): chỉ tắt chuông, không tự nghe.

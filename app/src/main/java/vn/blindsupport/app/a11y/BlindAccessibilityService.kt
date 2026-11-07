@@ -180,13 +180,19 @@ class BlindAccessibilityService : AccessibilityService() {
         }
         val speakerTask = task.keywords === UiClicker.SPEAKER_KEYS
         // Âm thanh đã ra loa ngoài rồi: không chạm vào nút Loa nữa (chạm sẽ TẮT loa).
-        if (speakerTask && CallSpeaker.isSpeakerActive(this)) {
+        // Chỉ tin được trên Android 11 trở xuống; Android 12+ trả lời theo yêu cầu của chính app.
+        if (speakerTask && android.os.Build.VERSION.SDK_INT < 31 && CallSpeaker.isSpeakerActive(this)) {
             UiClicker.finish(task, true)
             return
         }
         val roots = mutableListOf<AccessibilityNodeInfo>()
         runCatching { windows }.getOrNull()?.forEach { w -> w.root?.let { roots += it } }
         rootInActiveWindow?.let { roots += it }
+        // Màn hình cuộc gọi của Zalo/WhatsApp không hiện (máy khóa, đang mở app khác): mở nó lên một lần.
+        if (speakerTask && roots.none { it.packageName?.toString() == task.pkg } && !task.screenRequested) {
+            task.screenRequested = true
+            VoipCallController.bringCallScreen(this)
+        }
         for (root in roots) {
             if (root.packageName?.toString() != task.pkg) continue
             when (findAndClick(root, task.keywords, allowTap = speakerTask)) {
