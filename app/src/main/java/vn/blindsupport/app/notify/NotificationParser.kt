@@ -276,10 +276,10 @@ object NotificationParser {
         return out
     }
 
-    private val GROUP_TITLE = Regex("^\\s*(nhóm|group)\\s*[:：]", RegexOption.IGNORE_CASE)
+    private val GROUP_TITLE = Regex("^\\s*(nhóm|group|cộng đồng|community)\\s*[:：]", RegexOption.IGNORE_CASE)
 
     /** Tiêu đề kiểu "Nhóm: hello" (Zalo) hoặc "Group: …". */
-    private fun looksLikeGroupTitle(title: String?): Boolean = title != null && GROUP_TITLE.containsMatchIn(title)
+    fun looksLikeGroupTitle(title: String?): Boolean = title != null && GROUP_TITLE.containsMatchIn(title)
 
     /** "Nhóm: hello" → "hello". */
     fun cleanGroupTitle(title: String): String = title.replace(GROUP_TITLE, "").trim()

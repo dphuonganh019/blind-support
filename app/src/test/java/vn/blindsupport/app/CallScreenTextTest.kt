@@ -6,6 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import vn.blindsupport.app.notify.CallScreenText
+import vn.blindsupport.app.notify.NotificationParser
 
 class CallScreenTextTest {
     @Test
@@ -37,5 +38,16 @@ class CallScreenTextTest {
         assertEquals("Con Gái", CallScreenText.callerFromNotification("Con Gái", "Cuộc gọi thoại đến"))
         assertEquals("Con Gái", CallScreenText.callerFromNotification("Zalo", "Con Gái: Cuộc gọi thoại đến"))
         assertNull(CallScreenText.callerFromNotification("Zalo", "Cuộc gọi thoại đến"))
+    }
+
+    @Test
+    fun zaloCommunityTitle_isGroup() {
+        assertTrue(NotificationParser.looksLikeGroupTitle("Cộng đồng: (2).D.Home: 1n1k, 2 Ngủ Nam,Bắc Từ Liêm"))
+        assertTrue(NotificationParser.looksLikeGroupTitle("Cộng đồng: Code Beavers Developer Community"))
+        assertTrue(NotificationParser.looksLikeGroupTitle("Nhóm: hello"))
+        assertFalse(NotificationParser.looksLikeGroupTitle("Chị Trang 🙆🏻"))
+        assertFalse(NotificationParser.looksLikeGroupTitle("Sư cô Liên Nghiêm"))
+        assertEquals("Code Beavers Developer Community",
+            NotificationParser.cleanGroupTitle("Cộng đồng: Code Beavers Developer Community"))
     }
 }
