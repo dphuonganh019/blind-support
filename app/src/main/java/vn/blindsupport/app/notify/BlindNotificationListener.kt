@@ -70,45 +70,69 @@ class BlindNotificationListener : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         if (sbn.packageName == packageName) return
         if (!Prefs.appEnabled) return
+        val voip = sbn.packageName in AppIds.VOIP
+        val desc = if (voip) NotifLog.describe(sbn) else ""
         try {
-            handlePosted(sbn)
+            val outcome = handlePosted(sbn)
+            if (voip) NotifLog.add("$desc\n    → $outcome")
         } catch (e: Exception) {
             Log.e(TAG, "Lỗi xử lý thông báo", e)
+            if (voip) NotifLog.add("$desc\n    → LỖI ${e.javaClass.simpleName}: ${e.message}")
         }
     }
 
-    private fun handlePosted(sbn: StatusBarNotification) {
+    /** Xử lý một thông báo; trả về việc đã làm (ghi vào nhật ký thông báo). */
+    private fun handlePosted(sbn: StatusBarNotification): String {
+        // 0) Thông báo của cuộc gọi Zalo vừa nghe (nhận theo cách Android 11): đang trong cuộc gọi.
+        if (sbn.packageName in AppIds.VOIP && VoipCallController.isLegacyAnsweredKey(sbn.key)) {
+            ongoingVoipKeys += sbn.key
+            voipCallInProgress = true
+            VoipCallController.onCallInProgress(sbn.key, sbn.notification?.contentIntent)
+            return "đang trong cuộc gọi (Android 11)"
+        }
         // 1) Cuộc gọi Zalo/WhatsApp đang đổ chuông
         NotificationParser.incomingVoipCall(sbn)?.let { info ->
-            if (Prefs.voipCalls) VoipCallController.onIncoming(this, info)
-            return
+            if (!Prefs.voipCalls) return "cuộc gọi đến, nhưng mục báo cuộc gọi Zalo/WhatsApp đang tắt"
+            VoipCallController.onIncoming(this, info)
+            return "cuộc gọi đến từ \"${info.callerName}\"" +
+                (if (info.legacy) " (Android 11)" else "") +
+                (if (info.answer == null) ", không có nút Trả lời" else "")
         }
         // 2) Cuộc gọi Zalo/WhatsApp đang diễn ra
         if (NotificationParser.isOngoingVoipCall(sbn)) {
             ongoingVoipKeys += sbn.key
             voipCallInProgress = true
             VoipCallController.onCallInProgress(sbn.key, sbn.notification?.contentIntent)
-            return
+            return "đang trong cuộc gọi"
         }
         // 3) Cuộc gọi nhỡ Zalo/WhatsApp
         NotificationParser.missedVoipCall(sbn)?.let { missed ->
+            VoipCallController.onMissed(sbn.packageName)
             if (AppIds.readEnabled(sbn.packageName) || Prefs.voipCalls) {
                 announceMissed(sbn.packageName, missed)
+                return "cuộc gọi nhỡ"
             }
-            return
+            return "cuộc gọi nhỡ (không đọc vì đang tắt)"
         }
         // 4) Tin nhắn
-        if (!AppIds.readEnabled(sbn.packageName)) return
-        for ((msg, isGroup) in NotificationParser.newMessages(sbn)) {
+        if (!AppIds.readEnabled(sbn.packageName)) return "bỏ qua (đang tắt đọc tin ${AppIds.label(sbn.packageName)})"
+        val messages = NotificationParser.newMessages(sbn)
+        if (messages.isEmpty()) return "không có tin mới để đọc"
+        var spoken = 0
+        var group = 0
+        for ((msg, isGroup) in messages) {
             if (isGroup && !Prefs.readGroups) {
                 // Tin nhóm: chỉ lưu lại để nghe khi muốn, không đọc to.
                 msg.read = false
                 MessageStore.add(msg)
+                group++
                 continue
             }
             MessageStore.add(msg)
             MessageAnnouncer.enqueueMessage(msg)
+            spoken++
         }
+        return "tin mới: $spoken đưa vào hàng đọc" + (if (group > 0) ", $group tin nhóm chỉ lưu" else "")
     }
 
     /**
@@ -145,6 +169,9 @@ class BlindNotificationListener : NotificationListenerService() {
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
+        if (sbn.packageName in AppIds.VOIP) {
+            NotifLog.add("${AppIds.label(sbn.packageName)} #${sbn.id} đã gỡ thông báo")
+        }
         VoipCallController.onNotificationRemoved(this, sbn.key)
         if (ongoingVoipKeys.remove(sbn.key)) {
             voipCallInProgress = ongoingVoipKeys.isNotEmpty()

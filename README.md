@@ -37,6 +37,7 @@ Nghe máy xong app tự **bật loa ngoài** và đưa **âm lượng cuộc g�
 
 1. Chuông Zalo/WhatsApp reo khoảng **3 giây** (Zalo đổ chuông ngắn hơn sim), rồi app nói: *"Có điện thoại Zalo! … gọi. Sau tiếng bíp, nói: nghe, để nghe."* Các lần sau như cuộc gọi sim.
 2. Vì chuông Zalo/WhatsApp vẫn kêu (app không tắt được), app chỉ nhận câu có chữ **"nghe"** (như trên), "bắt máy", "trả lời" để nghe máy (không nhận "có", "ừ", "vâng" – tiếng chuông hay bị nghe nhầm thành các từ này). Nói **"không"** để từ chối (có hỏi lại).
+   - Trên **Android 11 trở xuống** (như OPPO A92), Zalo báo cuộc gọi theo kiểu cũ. App nhận ra cuộc gọi qua chữ "Cuộc gọi thoại đến / Cuộc gọi video đến" trong thông báo, hoặc trên màn hình cuộc gọi của Zalo (có nút Trả lời / Từ chối). Khi nói "nghe", app tự chạm nút **Trả lời** của Zalo.
 3. **Phím cạnh máy không dùng được** để nghe cuộc gọi Zalo/WhatsApp (Android không chuyển phím cho app), nên app không nhắc cách này.
 4. Nghe máy xong, app tự bật **loa ngoài** bằng Trợ năng:
    - chờ màn hình cuộc gọi Zalo/WhatsApp hiện ổn định và cuộc gọi đã kết nối, rồi chạm nút **Loa** một lần;
@@ -156,7 +157,7 @@ Mở biểu tượng **Cài đặt Trợ Lý**, làm cho tới khi mọi mục �
 
 Các phần khác trên màn hình:
 
-- **2. Thử nghiệm:** "Thử giọng đọc"; chọn **độ to** Mức 1–4 (nút đang chọn **màu xanh, có dấu ✓**; mặc định Mức 3); "Đọc chậm hơn / nhanh hơn" (hiện tốc độ mới); "Thử nhận lệnh giọng nói"; "Giả lập cuộc gọi đến"; "Gửi nhật ký nhận dạng giọng nói"; "Gửi thông tin màn hình Zalo (lỗi loa ngoài)".
+- **2. Thử nghiệm:** "Thử giọng đọc"; chọn **độ to** Mức 1–4 (nút đang chọn **màu xanh, có dấu ✓**; mặc định Mức 3); "Đọc chậm hơn / nhanh hơn" (hiện tốc độ mới); "Thử nhận lệnh giọng nói"; "Giả lập cuộc gọi đến"; "Gửi nhật ký nhận dạng giọng nói"; "Gửi thông tin màn hình Zalo (lỗi loa ngoài)"; "Gửi nhật ký thông báo Zalo / WhatsApp" (khi cuộc gọi hay tin Zalo/WhatsApp không được báo hoặc báo trễ: ghi giờ app nhận từng thông báo và việc app đã làm, nhìn vào biết Zalo trễ hay app trễ).
 - **3. Tùy chọn:** hỏi "nghe không" bằng giọng nói; **đổ chuông trước khi đọc tên** (0/3/6/10 giây, bấm để đổi); **rung khi có cuộc gọi**; tự bật loa ngoài; âm lượng cuộc gọi tối đa; báo cuộc gọi Zalo/WhatsApp; đọc tin Zalo / WhatsApp / SMS / tin nhóm / nội dung tin; báo pin; giữ phím giảm âm lượng để mở lệnh; giờ yên tĩnh.
 - **4. Cách mở lệnh giọng nói** và **5. Cài đặt riêng theo hãng máy** (hướng dẫn hiện theo máy đang dùng).
 - **6. Tạm tắt hoặc gỡ Trợ Lý** – xem mục 7 bên dưới.
@@ -168,7 +169,9 @@ ColorOS tắt app chạy nền rất mạnh. Làm cho **cả Trợ Lý Nghe Gọ
 1. Cài đặt → Quản lý ứng dụng → chọn app → bật **Cho phép tự khởi chạy** và **Cho phép ứng dụng khác khởi chạy**.
 2. Cùng màn hình → **Mức sử dụng pin** → bật **Cho phép hoạt động nền**, tắt tối ưu hóa pin.
 3. Cùng màn hình → Quyền → bật **Hiển thị trên màn hình khóa**, **Cửa sổ bật lên / mở giao diện khi chạy nền**, **Hiển thị trên ứng dụng khác**.
-4. Mở danh sách app gần đây → **khóa** thẻ Trợ Lý Nghe Gọi.
+4. Mở danh sách app gần đây → **khóa** thẻ Trợ Lý Nghe Gọi và Zalo.
+   - Cài đặt → Pin → Cài đặt khác: tắt **Tối ưu hóa chờ khi ngủ** (nếu có). Mục này cắt mạng khi máy nằm yên, tắt màn hình, làm Zalo không nhận tin cho tới khi bật màn hình.
+   - Trong Zalo → Cá nhân → Cài đặt → Thông báo: bật báo tin nhắn mới và cuộc gọi đến. Cuộc trò chuyện nào bị "tắt thông báo" thì app cũng không đọc được.
 5. Nút nguồn của OPPO chỉ mở được Camera / Trợ lý Google, nên dùng **giữ phím giảm âm lượng** để mở lệnh giọng nói.
 6. Cần wifi một lần để tải giọng đọc tiếng Việt của Google. Nên thử **tắt mạng** rồi ra một lệnh: nếu nhật ký ghi **[Google]** là máy có gói nhận dạng tiếng Việt ngoại tuyến; ghi **[offline]** là đang dùng bộ dự phòng.
 

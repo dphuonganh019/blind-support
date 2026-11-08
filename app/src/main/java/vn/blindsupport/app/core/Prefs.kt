@@ -157,6 +157,11 @@ object Prefs {
         get() = sp.getString("last_ui_dump", "") ?: ""
         set(v) = sp.edit().putString("last_ui_dump", v.take(60_000)).apply()
 
+    /** Nhật ký thông báo Zalo/WhatsApp app nhận được và việc app đã làm (để tìm lỗi trên máy thật). */
+    var notifLog: String
+        get() = sp.getString("notif_log", "") ?: ""
+        set(v) = sp.edit().putString("notif_log", v).apply()
+
     /** Nhật ký các câu bộ nhận dạng giọng nói nghe ra gần đây (để chỉnh lệnh theo giọng thật). */
     var recognitionLog: String
         get() = sp.getString("recognition_log", "") ?: ""

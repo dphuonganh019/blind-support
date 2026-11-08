@@ -64,6 +64,14 @@ object VoipCallController {
     /** Vừa nghe máy Zalo/WhatsApp: Zalo hay đăng lại thông báo "cuộc gọi đến" một lần nữa ngay sau đó. */
     @Volatile private var answeredPkg: String? = null
     @Volatile private var answeredAt = 0L
+    /** Cuộc gọi vừa nghe được nhận ra theo cách Android 11 (legacy): khóa thông báo của nó. */
+    @Volatile private var answeredLegacyKey: String? = null
+
+    /**
+     * Thông báo [key] là của cuộc gọi Zalo vừa nghe (nhận theo cách Android 11): coi là "đang trong
+     * cuộc gọi" để biết lúc cuộc gọi kết thúc. Cuộc gọi nhận theo kiểu chuẩn không bị ảnh hưởng.
+     */
+    fun isLegacyAnsweredKey(key: String): Boolean = key == answeredLegacyKey
 
     fun onIncoming(context: Context, info: VoipCallInfo) {
         if (!Prefs.appEnabled) return
@@ -128,14 +136,27 @@ object VoipCallController {
         val info = current ?: return
         answeredPkg = info.pkg
         answeredAt = System.currentTimeMillis()
+        answeredLegacyKey = if (info.legacy) info.key else null
         stopPrompt()
         _state.value = State.ANSWERED
         val sent = info.answer?.let { send(context, it) } ?: false
+        if (info.legacy) vn.blindsupport.app.notify.NotifLog.add("[nghe] ${AppIds.label(info.pkg)}: ${if (sent) "bấm nút Trả lời trong thông báo" else "nhờ trợ năng bấm Trả lời"}")
         if (!sent) {
             // Không có nút trong thông báo: nhờ trợ năng bấm nút "Trả lời" trên màn hình Zalo.
             UiClicker.arm(context, info.pkg, UiClicker.ANSWER_KEYS, 8_000) { ok ->
+                if (info.legacy) vn.blindsupport.app.notify.NotifLog.add("[nghe] trợ năng bấm Trả lời: ${if (ok) "được" else "KHÔNG được"}")
                 if (ok) afterAnswered(context, info) else App.appScope.launch {
                     Speaker.speak("Không tự nghe máy được. Hãy vuốt hoặc bấm nút nghe trên màn hình.")
+                }
+            }
+            // Màn hình của app vừa đóng; nếu màn hình cuộc gọi Zalo không hiện ra thì mở nó lên.
+            if (info.legacy) {
+                App.appScope.launch {
+                    delay(1_500)
+                    val task = UiClicker.pending
+                    if (task != null && task.pkg == info.pkg && !task.finished) {
+                        info.open?.let { send(context, it) }
+                    }
                 }
             }
             return
@@ -214,6 +235,7 @@ object VoipCallController {
     /** Cuộc gọi Zalo/WhatsApp đã kết thúc. */
     fun onCallEnded(context: Context) {
         ongoingIntent = null
+        answeredLegacyKey = null
         // Cuộc gọi đã xong: cuộc gọi đến tiếp theo (kể cả ngay sau đó) phải được báo bình thường.
         answeredPkg = null
         answeredAt = 0L
@@ -229,6 +251,79 @@ object VoipCallController {
         if (!sent) {
             UiClicker.arm(context, info.pkg, UiClicker.DECLINE_KEYS, 6_000) { }
         }
+    }
+
+    // ---------- Android 11: nhận cuộc gọi Zalo từ màn hình cuộc gọi của Zalo ----------
+
+    @Volatile private var screenCheckAt = 0L
+
+    /**
+     * Dịch vụ trợ năng thấy màn hình "Cuộc gọi thoại đến" của Zalo (có nút Trả lời / Từ chối).
+     * Chỉ dùng khi thông báo không cho biết có cuộc gọi (Android 11 trở xuống): chờ một chút, nếu
+     * cách nhận qua thông báo vẫn chưa thấy cuộc gọi thì hỏi người dùng như bình thường.
+     */
+    fun onIncomingScreen(context: Context, pkg: String, callerName: String) {
+        if (Build.VERSION.SDK_INT >= 31) return
+        if (!Prefs.appEnabled || !Prefs.voipCalls) return
+        if (isRinging()) return
+        if (isRecentOutgoing(pkg)) return
+        val now = System.currentTimeMillis()
+        if (pkg == answeredPkg && now - answeredAt < 30_000L) return
+        if (now - screenCheckAt < 3_000L) return
+        screenCheckAt = now
+        val app = context.applicationContext
+        App.appScope.launch {
+            delay(1_200)
+            if (isRinging()) return@launch
+            val svc = vn.blindsupport.app.a11y.BlindAccessibilityService.instance ?: return@launch
+            if (svc.incomingScreenState(pkg) != vn.blindsupport.app.a11y.BlindAccessibilityService.ScreenState.RINGING) return@launch
+            val key = "screen:$pkg:${System.currentTimeMillis()}"
+            vn.blindsupport.app.notify.NotifLog.add("[màn hình] thấy cuộc gọi ${AppIds.label(pkg)} đến từ \"$callerName\" → hỏi nghe máy")
+            onIncoming(app, VoipCallInfo(key, pkg, callerName.ifBlank { "người gọi không rõ tên" }, null, null, legacy = true))
+            watchScreenCall(key, pkg)
+        }
+    }
+
+    /**
+     * Cuộc gọi nhận từ màn hình không có thông báo để biết lúc người gọi cúp máy: theo dõi màn hình
+     * Zalo (nếu đang hiện), cuộc gọi nhỡ, và dừng hẳn sau 60 giây.
+     */
+    private fun watchScreenCall(key: String, pkg: String) {
+        App.appScope.launch {
+            val start = System.currentTimeMillis()
+            var otherCount = 0
+            while (isRinging() && current?.key == key) {
+                delay(1_000)
+                if (System.currentTimeMillis() - start > 60_000L) {
+                    endRinging(key, "hết 60 giây")
+                    break
+                }
+                val st = vn.blindsupport.app.a11y.BlindAccessibilityService.instance?.incomingScreenState(pkg)
+                if (st == vn.blindsupport.app.a11y.BlindAccessibilityService.ScreenState.OTHER) {
+                    if (++otherCount >= 2) {
+                        endRinging(key, "màn hình Zalo không còn cuộc gọi")
+                        break
+                    }
+                } else {
+                    otherCount = 0
+                }
+            }
+        }
+    }
+
+    /** Zalo/WhatsApp báo cuộc gọi nhỡ: cuộc gọi đang hỏi (nhận theo cách Android 11) đã kết thúc. */
+    fun onMissed(pkg: String) {
+        val c = current ?: return
+        if (c.legacy && c.pkg == pkg && isRinging()) endRinging(c.key, "có thông báo cuộc gọi nhỡ")
+    }
+
+    private fun endRinging(key: String, reason: String) {
+        val c = current ?: return
+        if (c.key != key || _state.value != State.RINGING) return
+        vn.blindsupport.app.notify.NotifLog.add("[màn hình] dừng hỏi: $reason")
+        stopPrompt()
+        _state.value = State.IDLE
+        current = null
     }
 
     /** Ngừng đọc/hỏi nhưng vẫn để cuộc gọi đổ chuông. */

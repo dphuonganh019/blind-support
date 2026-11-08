@@ -223,6 +223,25 @@ class SetupActivity : ComponentActivity() {
             }
         })
 
+        col.addView(note(
+            "Nếu cuộc gọi hay tin nhắn Zalo/WhatsApp không được báo, hoặc báo trễ: ngay sau lần đó, " +
+                "bấm nút dưới đây và gửi nội dung cho người làm app."
+        ))
+        col.addView(button("Gửi nhật ký thông báo Zalo / WhatsApp") {
+            val log = vn.blindsupport.app.core.Prefs.notifLog
+            if (log.isBlank()) {
+                lifecycleScope.launch { Speaker.speak("Chưa có nhật ký. Hãy nhờ người gọi hoặc nhắn Zalo thử trước.") }
+            } else {
+                val head = "Máy: ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE}\n" +
+                    "Zalo: ${runCatching { packageManager.getPackageInfo("com.zing.zalo", 0).versionName }.getOrNull() ?: "?"}\n" +
+                    "Mỗi thông báo: giờ app nhận, loại, nút, tiêu đề | nội dung, rồi → việc app đã làm\n\n"
+                val i = Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_SUBJECT, "Trợ Lý Nghe Gọi ${versionName()} - nhật ký thông báo")
+                    .putExtra(Intent.EXTRA_TEXT, head + log)
+                open(Intent.createChooser(i, "Gửi qua"))
+            }
+        })
+
         col.addView(heading("3. Tùy chọn"))
         col.addView(toggle("Hỏi \"có muốn nghe không\" và nghe câu trả lời bằng giọng nói", Prefs.voiceAnswer) { Prefs.voiceAnswer = it })
         lateinit var ringButton: Button

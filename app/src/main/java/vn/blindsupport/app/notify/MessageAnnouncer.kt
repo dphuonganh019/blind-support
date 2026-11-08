@@ -1,6 +1,7 @@
 package vn.blindsupport.app.notify
 
 import android.content.Context
+import android.os.PowerManager
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -30,31 +31,49 @@ object MessageAnnouncer {
     private var started = false
     @Volatile private var heldDuringCall = 0
 
+    @Volatile private var appContext: Context? = null
+
+    /** Giữ máy thức một lúc ngắn từ khi tin đến tới khi bắt đầu đọc (tự nhả sau 15 giây). */
+    private fun bridgeWake() {
+        val ctx = appContext ?: return
+        runCatching {
+            (ctx.getSystemService(Context.POWER_SERVICE) as PowerManager)
+                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TroLyNgheGoi:queue")
+                .apply { setReferenceCounted(false); acquire(15_000L) }
+        }
+    }
+
     fun start(context: Context) {
         if (started) return
         started = true
         val app = context.applicationContext
+        appContext = app
         App.appScope.launch {
             for (item in queue) {
                 if (!Prefs.appEnabled) continue
                 when (item) {
                     is Item.Msg -> {
+                        val who = "${item.msg.app} từ ${item.msg.sender}"
                         if (isBusy(app)) {
                             heldDuringCall++
+                            NotifLog.add("[không đọc] tin $who: đang có cuộc gọi / đang nghe lệnh")
                             continue
                         }
                         if (isQuiet(app)) {
                             Prefs.quietPending = true
+                            NotifLog.add("[không đọc] tin $who: đang trong giờ yên tĩnh")
                             continue
                         }
                         if (item.msg.read) continue
-                        Speaker.speak(format(item.msg))
+                        NotifLog.add("[bắt đầu đọc] tin $who")
+                        awake(app) { Speaker.speak(format(item.msg)) }
                         MessageStore.markRead(listOf(item.msg))
+                        NotifLog.add("[đọc xong] tin $who")
                     }
                     is Item.Text -> {
                         if (isBusy(app)) continue
                         if (!item.ignoreQuiet && isQuiet(app)) continue
-                        Speaker.speak(item.text)
+                        awake(app) { Speaker.speak(item.text) }
                     }
                 }
                 delay(400)
@@ -62,12 +81,31 @@ object MessageAnnouncer {
         }
     }
 
+    /**
+     * Giữ máy thức (chỉ bộ xử lý, không bật màn hình) trong lúc đọc, để máy tắt màn hình không cho
+     * app "ngủ" giữa chừng. Tự nhả sau khi đọc xong, hoặc tối đa 2 phút.
+     */
+    private suspend fun awake(context: Context, block: suspend () -> Unit) {
+        val wl = runCatching {
+            (context.getSystemService(Context.POWER_SERVICE) as PowerManager)
+                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TroLyNgheGoi:read")
+                .apply { setReferenceCounted(false); acquire(120_000L) }
+        }.getOrNull()
+        try {
+            block()
+        } finally {
+            runCatching { if (wl?.isHeld == true) wl.release() }
+        }
+    }
+
     fun enqueueMessage(msg: StoredMessage) {
+        bridgeWake()
         queue.trySend(Item.Msg(msg))
     }
 
     /** Thông báo hệ thống (pin, cuộc gọi nhỡ Zalo...). */
     fun enqueueText(text: String, ignoreQuiet: Boolean = false) {
+        bridgeWake()
         queue.trySend(Item.Text(text, ignoreQuiet))
     }
 

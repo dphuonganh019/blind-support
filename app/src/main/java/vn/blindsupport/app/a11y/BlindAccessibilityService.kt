@@ -20,6 +20,7 @@ import vn.blindsupport.app.core.Prefs
 import vn.blindsupport.app.core.TextUtils
 import vn.blindsupport.app.ui.VoiceCommandActivity
 import vn.blindsupport.app.ui.VoiceSession
+import vn.blindsupport.app.notify.CallScreenText
 import vn.blindsupport.app.voip.VoipCallController
 
 /**
@@ -164,6 +165,7 @@ class BlindAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event != null) checkIncomingCallScreen(event)
         val task = UiClicker.pending ?: return
         if (event?.packageName?.toString() != task.pkg) return
         val now = SystemClock.uptimeMillis()
@@ -200,6 +202,74 @@ class BlindAccessibilityService : AccessibilityService() {
     }
 
     private enum class Result { CLICKED, ALREADY_ON, NOT_FOUND }
+
+    // ---------------- Android 11: thấy màn hình cuộc gọi Zalo đến ----------------
+
+    enum class ScreenState { RINGING, OTHER, NOT_VISIBLE }
+
+    private var lastIncomingCheck = 0L
+
+    /**
+     * Android 11 trở xuống: Zalo không dùng kiểu thông báo cuộc gọi chuẩn, nên app có thể không
+     * biết có cuộc gọi. Nếu thấy màn hình "Cuộc gọi thoại đến" của Zalo thì báo cho bộ điều khiển.
+     */
+    private fun checkIncomingCallScreen(event: AccessibilityEvent) {
+        if (android.os.Build.VERSION.SDK_INT >= 31) return
+        val pkg = event.packageName?.toString() ?: return
+        if (pkg != vn.blindsupport.app.notify.AppIds.ZALO) return
+        // Chỉ xét lúc Zalo mở màn hình mới (không quét mỗi lần cuộn tin nhắn, cho máy khỏi chậm).
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        if (VoipCallController.isRinging()) return
+        val now = SystemClock.uptimeMillis()
+        if (now - lastIncomingCheck < 800) return
+        lastIncomingCheck = now
+        if (reportIncoming(pkg)) return
+        // Màn hình vừa mở có thể chưa vẽ xong chữ: xem lại sau một chút.
+        handler.postDelayed({ if (!VoipCallController.isRinging()) reportIncoming(pkg) }, 800)
+    }
+
+    private fun reportIncoming(pkg: String): Boolean {
+        val caller = runCatching { incomingCaller(pkg) }.getOrNull() ?: return false
+        VoipCallController.onIncomingScreen(this, pkg, caller)
+        return true
+    }
+
+    /** Tên người gọi nếu màn hình cuộc gọi đến của [pkg] đang hiện ("" nếu không đọc được tên). */
+    private fun incomingCaller(pkg: String): String? {
+        for (root in appRoots(pkg)) {
+            CallScreenText.incomingCaller(screenTexts(root))?.let { return it }
+        }
+        return null
+    }
+
+    /** Màn hình của [pkg] có đang hiện cuộc gọi đến không. */
+    fun incomingScreenState(pkg: String): ScreenState {
+        val roots = runCatching { appRoots(pkg) }.getOrDefault(emptyList())
+        if (roots.isEmpty()) return ScreenState.NOT_VISIBLE
+        return if (roots.any { CallScreenText.incomingCaller(screenTexts(it)) != null }) ScreenState.RINGING
+        else ScreenState.OTHER
+    }
+
+    private fun appRoots(pkg: String): List<AccessibilityNodeInfo> {
+        val roots = mutableListOf<AccessibilityNodeInfo>()
+        runCatching { windows }.getOrNull()?.forEach { w -> w.root?.let { roots += it } }
+        rootInActiveWindow?.let { roots += it }
+        return roots.filter { it.packageName?.toString() == pkg }
+    }
+
+    /** Chữ trên màn hình theo thứ tự từ trên xuống (chữ và mô tả của từng nút). */
+    private fun screenTexts(root: AccessibilityNodeInfo): List<String> {
+        val out = ArrayList<String>()
+        var visited = 0
+        fun walk(n: AccessibilityNodeInfo, depth: Int) {
+            if (visited++ > 400 || depth > 30) return
+            n.text?.toString()?.takeIf { it.isNotBlank() }?.let { out += it }
+            n.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { out += it }
+            for (i in 0 until n.childCount) n.getChild(i)?.let { walk(it, depth + 1) }
+        }
+        walk(root, 0)
+        return out
+    }
 
     /**
      * Bật loa ngoài trong cuộc gọi Zalo/WhatsApp, từng bước cho chắc:

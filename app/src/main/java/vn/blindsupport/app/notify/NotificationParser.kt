@@ -45,6 +45,13 @@ data class VoipCallInfo(
     val callerName: String,
     val answer: PendingIntent?,
     val decline: PendingIntent?,
+    /**
+     * Nhận ra theo cách dành cho Android 11 trở xuống (chữ trong thông báo hoặc trên màn hình Zalo),
+     * không phải kiểu thông báo cuộc gọi chuẩn.
+     */
+    val legacy: Boolean = false,
+    /** Mở màn hình cuộc gọi của Zalo (để trợ năng bấm nút Trả lời khi thông báo không có nút). */
+    val open: PendingIntent? = null,
 )
 
 @Suppress("DEPRECATION")
@@ -71,7 +78,7 @@ object NotificationParser {
         if (sbn.packageName !in AppIds.VOIP) return null
         val n = sbn.notification ?: return null
         val looksLikeCall = isCallNotification(n) || n.fullScreenIntent != null
-        if (!looksLikeCall) return null
+        if (!looksLikeCall) return legacyZaloIncoming(sbn, n)
 
         var answer: PendingIntent? = n.actions?.firstOrNull { matches(it.title, ANSWER_KEYS) }?.actionIntent
         var decline: PendingIntent? = n.actions?.firstOrNull { matches(it.title, DECLINE_KEYS) }?.actionIntent
@@ -86,7 +93,7 @@ object NotificationParser {
                 decline = n.extras.parcel<PendingIntent>(Notification.EXTRA_DECLINE_INTENT)
             }
         }
-        if (answer == null && !incomingByStyle && !looksIncoming(n)) return null
+        if (answer == null && !incomingByStyle && !looksIncoming(n)) return legacyZaloIncoming(sbn, n)
 
         val name = callerName(n) ?: "người gọi không rõ tên"
         return VoipCallInfo(sbn.key, sbn.packageName, name, answer, decline)
@@ -107,6 +114,39 @@ object NotificationParser {
             ).joinToString(" ")
         )
         return n.fullScreenIntent != null && INCOMING_TEXT.any { text.contains(TextUtils.normalize(it)) }
+    }
+
+    /**
+     * Android 11 trở xuống: Zalo báo cuộc gọi đến bằng thông báo thường (không có kiểu "cuộc gọi"
+     * của Android 12+). Nhận ra theo chữ "Cuộc gọi thoại đến" / "Cuộc gọi video đến".
+     * Android 12 trở lên (ví dụ Samsung) không dùng cách này, giữ nguyên như cũ.
+     */
+    private fun legacyZaloIncoming(sbn: StatusBarNotification, n: Notification): VoipCallInfo? {
+        if (Build.VERSION.SDK_INT >= 31) return null
+        if (sbn.packageName != AppIds.ZALO) return null
+        if ((n.flags and Notification.FLAG_GROUP_SUMMARY) != 0) return null
+        val template = n.extras.getString(Notification.EXTRA_TEMPLATE).orEmpty()
+        if (template.contains("MessagingStyle")) return null
+        // Thông báo cũ còn sót lại (ví dụ lúc dịch vụ vừa khởi động lại) không phải cuộc gọi đang reo.
+        if (System.currentTimeMillis() - sbn.postTime > 90_000L) return null
+        val title = n.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+        val text = n.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+        val parts = listOfNotNull(
+            title, text,
+            n.extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString(),
+            n.extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString(),
+            n.tickerText?.toString(),
+        )
+        val all = parts.joinToString(" . ")
+        if (TextUtils.normalize(all).let { it.contains("nhỡ") || it.contains("missed") }) return null
+        if (parts.none { CallScreenText.isIncomingText(it) }) return null
+        val answer = n.actions?.firstOrNull { matches(it.title, ANSWER_KEYS) }?.actionIntent
+        val decline = n.actions?.firstOrNull { matches(it.title, DECLINE_KEYS) }?.actionIntent
+        val name = CallScreenText.callerFromNotification(title, text) ?: "người gọi không rõ tên"
+        return VoipCallInfo(
+            sbn.key, sbn.packageName, name, answer, decline,
+            legacy = true, open = n.fullScreenIntent ?: n.contentIntent,
+        )
     }
 
     /** Cuộc gọi Zalo/WhatsApp đang diễn ra (không còn nút trả lời). */
