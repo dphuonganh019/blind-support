@@ -51,6 +51,9 @@ class SetupActivity : ComponentActivity() {
      * những người này không gọi được bằng giọng nói. Người hỗ trợ nên đổi tên trong danh bạ.
      */
     private val levelButtons = HashMap<Int, Button>()
+    /** Màu nền gốc của từng nút mức (để trả lại khi nút không còn được chọn). */
+    private val levelDefaultTints = HashMap<Int, ColorStateList?>()
+    private val levelDefaultTextColors = HashMap<Int, ColorStateList>()
 
     /** Nút mức đang chọn: màu xanh, có dấu ✓. */
     private fun renderLevelButtons() {
@@ -58,8 +61,8 @@ class SetupActivity : ComponentActivity() {
             val b = levelButtons[level] ?: continue
             val active = Prefs.voiceVolume == 100 && Prefs.boostLevel == level
             b.text = if (active) "✓ $title" else title
-            b.backgroundTintList = if (active) ColorStateList.valueOf(GREEN) else null
-            b.setTextColor(Color.WHITE)
+            b.backgroundTintList = if (active) ColorStateList.valueOf(GREEN) else levelDefaultTints[level]
+            levelDefaultTextColors[level]?.let { b.setTextColor(if (active) ColorStateList.valueOf(Color.WHITE) else it) }
         }
     }
 
@@ -168,6 +171,8 @@ class SetupActivity : ComponentActivity() {
                 lifecycleScope.launch { Speaker.speak("Mức $level. Có cuộc gọi từ Mẹ. Bạn có muốn nghe không?") }
             }
             levelButtons[level] = b
+            levelDefaultTints[level] = b.backgroundTintList
+            levelDefaultTextColors[level] = b.textColors
             col.addView(b)
         }
         renderLevelButtons()
