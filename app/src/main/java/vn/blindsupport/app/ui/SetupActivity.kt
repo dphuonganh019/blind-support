@@ -9,6 +9,8 @@ import vn.blindsupport.app.core.AppControl
 import android.content.res.ColorStateList
 import android.widget.Toast
 import android.graphics.Color
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -51,8 +53,7 @@ class SetupActivity : ComponentActivity() {
      * những người này không gọi được bằng giọng nói. Người hỗ trợ nên đổi tên trong danh bạ.
      */
     private val levelButtons = HashMap<Int, Button>()
-    /** Màu nền gốc của từng nút mức (để trả lại khi nút không còn được chọn). */
-    private val levelDefaultTints = HashMap<Int, ColorStateList?>()
+    /** Màu chữ gốc của từng nút mức (để trả lại khi nút không còn được chọn). */
     private val levelDefaultTextColors = HashMap<Int, ColorStateList>()
 
     /** Nút mức đang chọn: màu xanh, có dấu ✓. */
@@ -61,7 +62,9 @@ class SetupActivity : ComponentActivity() {
             val b = levelButtons[level] ?: continue
             val active = Prefs.voiceVolume == 100 && Prefs.boostLevel == level
             b.text = if (active) "✓ $title" else title
-            b.backgroundTintList = if (active) ColorStateList.valueOf(GREEN) else levelDefaultTints[level]
+            // Không đụng tới "tint" của nút: trên Samsung, đổi tint xong là nút mất màu nền gốc
+            // (nền trắng, chữ trắng). Chỉ phủ màu xanh lên nút đang chọn, nút khác giữ nguyên.
+            b.background?.colorFilter = if (active) PorterDuffColorFilter(GREEN, PorterDuff.Mode.SRC_IN) else null
             levelDefaultTextColors[level]?.let { b.setTextColor(if (active) ColorStateList.valueOf(Color.WHITE) else it) }
         }
     }
@@ -171,7 +174,7 @@ class SetupActivity : ComponentActivity() {
                 lifecycleScope.launch { Speaker.speak("Mức $level. Có cuộc gọi từ Mẹ. Bạn có muốn nghe không?") }
             }
             levelButtons[level] = b
-            levelDefaultTints[level] = b.backgroundTintList
+            b.background?.mutate()
             levelDefaultTextColors[level] = b.textColors
             col.addView(b)
         }
