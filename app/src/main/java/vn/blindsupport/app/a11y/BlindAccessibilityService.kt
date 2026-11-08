@@ -464,9 +464,23 @@ class BlindAccessibilityService : AccessibilityService() {
      * Tìm nút gần nhất thẳng hàng phía trên; không thấy thì chạm vào chỗ ngay trên chữ.
      */
     private fun clickIconAbove(root: AccessibilityNodeInfo, label: AccessibilityNodeInfo): Boolean {
+        val icon = iconAbove(root, label)
+        if (icon != null) {
+            if (isClickableNode(icon) && icon.isEnabled && icon.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
+            if (tapCenter(icon)) return true
+        }
         val lb = android.graphics.Rect()
         label.getBoundsInScreen(lb)
         if (lb.isEmpty) return false
+        // Không thấy nút: chạm ngay phía trên chữ.
+        return tapAt(lb.exactCenterX(), (lb.top - lb.height() * 1.5f).coerceAtLeast(1f))
+    }
+
+    /** Nút gần nhất nằm thẳng hàng ngay phía trên chữ [label], hoặc null. */
+    private fun iconAbove(root: AccessibilityNodeInfo, label: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        val lb = android.graphics.Rect()
+        label.getBoundsInScreen(lb)
+        if (lb.isEmpty) return null
         val screenW = resources.displayMetrics.widthPixels
         var best: AccessibilityNodeInfo? = null
         var bestScore = Int.MAX_VALUE
@@ -491,19 +505,108 @@ class BlindAccessibilityService : AccessibilityService() {
                 best = n
             }
         }
-        val icon = best
-        if (icon != null) {
-            if (isClickableNode(icon) && icon.isEnabled && icon.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
-            if (tapCenter(icon)) return true
-        }
-        // Không thấy nút: chạm ngay phía trên chữ.
-        val x = lb.exactCenterX()
-        val y = (lb.top - lb.height() * 1.5f).coerceAtLeast(1f)
+        return best
+    }
+
+    private fun tapAt(x: Float, y: Float, durationMs: Long = 100): Boolean {
         val path = android.graphics.Path().apply { moveTo(x, y) }
         val gesture = android.accessibilityservice.GestureDescription.Builder()
-            .addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 80))
+            .addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, durationMs))
             .build()
         return runCatching { dispatchGesture(gesture, null, null) }.getOrDefault(false)
+    }
+
+    private fun swipe(x1: Float, y1: Float, x2: Float, y2: Float, durationMs: Long = 400): Boolean {
+        val path = android.graphics.Path().apply { moveTo(x1, y1); lineTo(x2, y2) }
+        val gesture = android.accessibilityservice.GestureDescription.Builder()
+            .addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, durationMs))
+            .build()
+        return runCatching { dispatchGesture(gesture, null, null) }.getOrDefault(false)
+    }
+
+    // ---------------- Android 11: bấm nút trên màn hình cuộc gọi Zalo ----------------
+
+    enum class AnswerMethod(val label: String) { TAP("chạm như ngón tay"), SWIPE_UP("vuốt lên"), CLICK("lệnh bấm trợ năng") }
+
+    /**
+     * Bấm nút có chữ [key] ("trả lời" / "từ chối") trên màn hình cuộc gọi của [pkg] theo cách [method].
+     * Nút tròn nằm phía trên chữ; nếu chính chữ là nút bấm được thì bấm vào chữ.
+     * Trả về mô tả việc đã làm (ghi vào nhật ký).
+     */
+    fun pressZaloButton(pkg: String, key: String, method: AnswerMethod): String {
+        val nk = " " + TextUtils.normalize(key) + " "
+        for (root in appRoots(pkg)) {
+            val lbl = findFirst(root) { n -> label(n).contains(nk) } ?: continue
+            val lb = android.graphics.Rect()
+            lbl.getBoundsInScreen(lb)
+            val icon = if (isClickableNode(lbl)) lbl else iconAbove(root, lbl)
+            val target = android.graphics.Rect()
+            val how: String
+            if (icon != null) {
+                icon.getBoundsInScreen(target)
+                how = if (icon === lbl) "chính chữ là nút" else "nút phía trên chữ"
+            } else {
+                val y = (lb.top - lb.height() * 1.5f).toInt().coerceAtLeast(1)
+                target.set(lb.centerX() - 1, y - 1, lb.centerX() + 1, y + 1)
+                how = "không thấy nút, chạm phía trên chữ"
+            }
+            val cx = target.exactCenterX()
+            val cy = target.exactCenterY()
+            val screenH = resources.displayMetrics.heightPixels
+            val ok = when (method) {
+                AnswerMethod.TAP -> tapAt(cx, cy)
+                AnswerMethod.SWIPE_UP -> swipe(cx, cy, cx, (cy - screenH * 0.25f).coerceAtLeast(1f))
+                AnswerMethod.CLICK -> {
+                    val c = (icon?.let { clickableAncestor(it) } ?: clickableAncestor(lbl))
+                    c != null && c.isEnabled && c.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                }
+            }
+            return "$how, tại (${cx.toInt()},${cy.toInt()}), chữ tại ${lb.toShortString()} → ${if (ok) "đã gửi" else "không gửi được"}"
+        }
+        return "không thấy chữ \"$key\" trên màn hình Zalo (cửa sổ đang hiện: ${visiblePackages()})"
+    }
+
+    private fun visiblePackages(): String {
+        val roots = mutableListOf<AccessibilityNodeInfo>()
+        runCatching { windows }.getOrNull()?.forEach { w -> w.root?.let { roots += it } }
+        return roots.mapNotNull { it.packageName?.toString() }.distinct().joinToString()
+    }
+
+    /** Mô tả gọn các nút ở nửa dưới màn hình cuộc gọi Zalo (để sửa app nếu bấm không được). */
+    fun describeCallButtons(pkg: String): String {
+        val sb = StringBuilder()
+        val screenH = resources.displayMetrics.heightPixels
+        val screenW = resources.displayMetrics.widthPixels
+        sb.append("    màn hình ").append(screenW).append('x').append(screenH)
+            .append(", cửa sổ: ").append(visiblePackages()).append('\n')
+        var lines = 0
+        for (root in appRoots(pkg)) {
+            val queue = ArrayDeque<AccessibilityNodeInfo>()
+            queue.add(root)
+            var visited = 0
+            while (queue.isNotEmpty() && visited < 600 && lines < 30) {
+                val n = queue.removeFirst()
+                visited++
+                for (i in 0 until n.childCount) n.getChild(i)?.let { queue.add(it) }
+                val b = android.graphics.Rect()
+                n.getBoundsInScreen(b)
+                if (b.isEmpty || b.bottom < screenH / 3) continue
+                val text = n.text?.toString().orEmpty()
+                val desc = n.contentDescription?.toString().orEmpty()
+                val id = n.viewIdResourceName?.substringAfter(":id/").orEmpty()
+                val clickable = isClickableNode(n)
+                if (text.isEmpty() && desc.isEmpty() && id.isEmpty() && !clickable) continue
+                sb.append("    ").append(n.className?.toString()?.substringAfterLast('.').orEmpty())
+                if (id.isNotEmpty()) sb.append(" #").append(id)
+                if (text.isNotEmpty()) sb.append(" \"").append(text.take(30)).append('"')
+                if (desc.isNotEmpty()) sb.append(" [").append(desc.take(30)).append(']')
+                sb.append(' ').append(b.toShortString())
+                if (clickable) sb.append(" *bấm")
+                sb.append('\n')
+                lines++
+            }
+        }
+        return sb.toString().trimEnd()
     }
 
     private fun isClickableNode(n: AccessibilityNodeInfo): Boolean =

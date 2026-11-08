@@ -89,7 +89,7 @@ class BlindNotificationListener : NotificationListenerService() {
         if (sbn.packageName in AppIds.VOIP && VoipCallController.isLegacyAnsweredKey(sbn.key)) {
             ongoingVoipKeys += sbn.key
             voipCallInProgress = true
-            VoipCallController.onCallInProgress(sbn.key, sbn.notification?.contentIntent)
+            VoipCallController.onCallInProgress(sbn.key, sbn.notification?.contentIntent, sbn.notification?.fullScreenIntent, sbn.packageName)
             return "đang trong cuộc gọi (Android 11)"
         }
         // 1) Cuộc gọi Zalo/WhatsApp đang đổ chuông
@@ -104,7 +104,7 @@ class BlindNotificationListener : NotificationListenerService() {
         if (NotificationParser.isOngoingVoipCall(sbn)) {
             ongoingVoipKeys += sbn.key
             voipCallInProgress = true
-            VoipCallController.onCallInProgress(sbn.key, sbn.notification?.contentIntent)
+            VoipCallController.onCallInProgress(sbn.key, sbn.notification?.contentIntent, sbn.notification?.fullScreenIntent, sbn.packageName)
             return "đang trong cuộc gọi"
         }
         // 3) Cuộc gọi nhỡ Zalo/WhatsApp

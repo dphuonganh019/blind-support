@@ -118,11 +118,32 @@ object VoipCallController {
     /** Thông báo cuộc gọi của cuộc gọi đang hỏi (nhận theo cách Android 11): gỡ đi = cuộc gọi đã dừng reo. */
     @Volatile private var linkedRingKey: String? = null
 
+    /** Android 11: "mở màn hình cuộc gọi toàn màn hình" của thông báo cuộc gọi Zalo gần nhất. */
+    @Volatile private var lastFullScreenIntent: PendingIntent? = null
+    @Volatile private var lastFullScreenAt = 0L
+    /** Android 11: lúc thông báo cuộc gọi Zalo đổi sang kiểu "đang gọi" (không còn toàn màn hình) = đã kết nối. */
+    @Volatile private var lastConnectedAt = 0L
+    @Volatile private var openScreenAt = 0L
+
     /** Thông báo "đang trong cuộc gọi" của Zalo/WhatsApp xuất hiện. */
-    fun onCallInProgress(key: String, contentIntent: PendingIntent?) {
+    fun onCallInProgress(
+        key: String,
+        contentIntent: PendingIntent?,
+        fullScreenIntent: PendingIntent? = null,
+        pkg: String? = null,
+    ) {
         if (contentIntent != null) ongoingIntent = contentIntent
         lastCallNotifKey = key
         lastCallNotifAt = System.currentTimeMillis()
+        if (Build.VERSION.SDK_INT < 31 && pkg == AppIds.ZALO) {
+            if (fullScreenIntent != null) {
+                lastFullScreenIntent = fullScreenIntent
+                lastFullScreenAt = System.currentTimeMillis()
+                maybeOpenZaloCallScreen(pkg)
+            } else {
+                lastConnectedAt = System.currentTimeMillis()
+            }
+        }
         if (_state.value == State.RINGING && current?.legacy == true) {
             // Android 11: Zalo đưa lên thông báo cuộc gọi (không chữ, không nút) ngay khi đang REO,
             // giống hệt lúc đã nghe máy. Không được coi là đã nghe máy, kẻo app thôi hỏi và đóng
@@ -133,6 +154,33 @@ object VoipCallController {
         if (_state.value == State.RINGING) {
             stopPrompt()
             _state.value = State.ANSWERED
+        }
+    }
+
+    /**
+     * Android 11, máy đang mở: Zalo chỉ hiện ô nhỏ phía trên màn hình (không phải màn hình cuộc gọi
+     * toàn màn hình), nên trợ năng không thấy cuộc gọi. Nếu sau 1,5 giây vẫn chưa thấy màn hình
+     * cuộc gọi Zalo thì tự mở màn hình cuộc gọi toàn màn hình của Zalo lên.
+     */
+    private fun maybeOpenZaloCallScreen(pkg: String) {
+        if (isRinging() || _state.value == State.ANSWERED && System.currentTimeMillis() - answeredAt < 120_000L) return
+        if (isRecentOutgoing(pkg)) return
+        if (!Prefs.appEnabled || !Prefs.voipCalls) return
+        val now = System.currentTimeMillis()
+        if (now - openScreenAt < 10_000L) return
+        if (now - declinedAt < 15_000L) return
+        if (pkg == answeredPkg && now - answeredAt < 30_000L) return
+        openScreenAt = now
+        App.appScope.launch {
+            delay(1_500)
+            if (isRinging()) return@launch
+            val svc = vn.blindsupport.app.a11y.BlindAccessibilityService.instance ?: return@launch
+            if (svc.incomingScreenState(pkg) == vn.blindsupport.app.a11y.BlindAccessibilityService.ScreenState.RINGING) return@launch
+            // Cuộc gọi đã kết nối (gọi đi hoặc đã nghe) thì không mở.
+            if (lastConnectedAt > lastFullScreenAt) return@launch
+            val pi = lastFullScreenIntent ?: return@launch
+            vn.blindsupport.app.notify.NotifLog.add("[màn hình] chưa thấy màn hình cuộc gọi Zalo → mở màn hình cuộc gọi toàn màn hình")
+            send(App.instance, pi)
         }
     }
 
@@ -159,6 +207,10 @@ object VoipCallController {
         answeredLegacyKey = if (info.legacy) info.key else null
         stopPrompt()
         _state.value = State.ANSWERED
+        if (info.legacy && info.answer == null && info.pkg == AppIds.ZALO && Build.VERSION.SDK_INT < 31) {
+            legacyAnswer(context.applicationContext, info)
+            return
+        }
         val sent = info.answer?.let { send(context, it) } ?: false
         if (info.legacy) vn.blindsupport.app.notify.NotifLog.add("[nghe] ${AppIds.label(info.pkg)}: ${if (sent) "bấm nút Trả lời trong thông báo" else "nhờ trợ năng bấm Trả lời"}")
         if (!sent) {
@@ -182,6 +234,74 @@ object VoipCallController {
             return
         }
         afterAnswered(context, info)
+    }
+
+    /**
+     * Android 11, Zalo: thông báo cuộc gọi không có nút Trả lời, phải bấm nút trên màn hình Zalo.
+     * Nút của Zalo bỏ qua lệnh "bấm" của trợ năng, nên chạm như ngón tay thật, rồi KIỂM TRA đã
+     * kết nối chưa (thông báo Zalo đổi sang kiểu "đang gọi"); chưa thì thử cách khác, tối đa 3 lần.
+     */
+    private fun legacyAnswer(context: Context, info: VoipCallInfo) {
+        val start = System.currentTimeMillis()
+        val log = vn.blindsupport.app.notify.NotifLog
+        log.add("[nghe] Zalo (Android 11): tự bấm nút Trả lời trên màn hình Zalo")
+        App.appScope.launch {
+            val methods = listOf(
+                vn.blindsupport.app.a11y.BlindAccessibilityService.AnswerMethod.TAP,
+                vn.blindsupport.app.a11y.BlindAccessibilityService.AnswerMethod.SWIPE_UP,
+                vn.blindsupport.app.a11y.BlindAccessibilityService.AnswerMethod.CLICK,
+            )
+            fun connected(): Boolean = lastConnectedAt > start
+            var ok = false
+            var dumped = false
+            for ((i, method) in methods.withIndex()) {
+                // Chờ màn hình cuộc gọi Zalo hiện ra (màn hình của app vừa đóng); không thấy thì mở nó lên.
+                var opened = false
+                var waited = 0
+                while (waited < 3_000 && !connected()) {
+                    val st = vn.blindsupport.app.a11y.BlindAccessibilityService.instance?.incomingScreenState(info.pkg)
+                    if (st == vn.blindsupport.app.a11y.BlindAccessibilityService.ScreenState.RINGING) break
+                    if (!opened && waited >= 600) {
+                        opened = true
+                        (info.open ?: lastFullScreenIntent?.takeIf { System.currentTimeMillis() - lastFullScreenAt < 90_000L })
+                            ?.let { send(context, it) }
+                    }
+                    delay(300)
+                    waited += 300
+                }
+                if (connected()) { ok = true; break }
+                val svc = vn.blindsupport.app.a11y.BlindAccessibilityService.instance
+                if (svc == null) {
+                    log.add("[nghe] lần ${i + 1}: trợ năng của app không chạy")
+                    break
+                }
+                if (!dumped) {
+                    dumped = true
+                    log.add("[nghe] màn hình Zalo:\n" + svc.describeCallButtons(info.pkg))
+                }
+                val result = svc.pressZaloButton(info.pkg, "trả lời", method)
+                log.add("[nghe] lần ${i + 1} (${method.label}): $result")
+                // Chờ Zalo kết nối.
+                var w = 0
+                while (w < 2_500 && !connected()) {
+                    delay(250)
+                    w += 250
+                }
+                if (connected()) { ok = true; break }
+                // Màn hình Zalo không còn cuộc gọi đến (đã nghe, hoặc người gọi đã cúp): thôi bấm.
+                val st = svc.incomingScreenState(info.pkg)
+                if (st == vn.blindsupport.app.a11y.BlindAccessibilityService.ScreenState.OTHER) {
+                    ok = true
+                    break
+                }
+            }
+            log.add("[nghe] kết quả: ${if (ok) "Zalo đã nhấc máy" else "KHÔNG nhấc được máy"}")
+            if (ok) {
+                afterAnswered(context, info)
+            } else {
+                Speaker.speak("Không tự nghe máy được. Hãy bấm nút nghe ở góc dưới, bên phải màn hình.")
+            }
+        }
     }
 
     private fun afterAnswered(context: Context, info: VoipCallInfo) {
@@ -262,11 +382,37 @@ object VoipCallController {
         CallSpeaker.release(context)
     }
 
+    /** Lúc người dùng vừa từ chối: Zalo còn reo thêm vài giây, đừng hỏi lại. */
+    @Volatile private var declinedAt = 0L
+
     fun decline(context: Context) {
         val info = current ?: return
+        declinedAt = System.currentTimeMillis()
         stopPrompt()
         _state.value = State.IDLE
         current = null
+        if (info.legacy && info.decline == null && info.pkg == AppIds.ZALO && Build.VERSION.SDK_INT < 31) {
+            // Android 11, Zalo: chạm như ngón tay vào nút Từ chối trên màn hình Zalo.
+            App.appScope.launch {
+                var waited = 0
+                var opened = false
+                while (waited < 3_000) {
+                    val st = vn.blindsupport.app.a11y.BlindAccessibilityService.instance?.incomingScreenState(info.pkg)
+                    if (st == vn.blindsupport.app.a11y.BlindAccessibilityService.ScreenState.RINGING) break
+                    if (!opened && waited >= 600) {
+                        opened = true
+                        info.open?.let { send(context, it) }
+                    }
+                    delay(300)
+                    waited += 300
+                }
+                val r = vn.blindsupport.app.a11y.BlindAccessibilityService.instance?.pressZaloButton(
+                    info.pkg, "từ chối", vn.blindsupport.app.a11y.BlindAccessibilityService.AnswerMethod.TAP
+                ) ?: "trợ năng của app không chạy"
+                vn.blindsupport.app.notify.NotifLog.add("[từ chối] Zalo: $r")
+            }
+            return
+        }
         val sent = info.decline?.let { send(context, it) } ?: false
         if (!sent) {
             UiClicker.arm(context, info.pkg, UiClicker.DECLINE_KEYS, 6_000) { }
@@ -290,6 +436,7 @@ object VoipCallController {
         val now = System.currentTimeMillis()
         if (pkg == answeredPkg && now - answeredAt < 30_000L) return
         if (now - screenCheckAt < 3_000L) return
+        if (now - declinedAt < 15_000L) return
         screenCheckAt = now
         val app = context.applicationContext
         App.appScope.launch {
@@ -301,7 +448,8 @@ object VoipCallController {
             // Thông báo cuộc gọi Zalo vừa đăng (nếu có) là của cuộc gọi này.
             linkedRingKey = lastCallNotifKey?.takeIf { System.currentTimeMillis() - lastCallNotifAt < 15_000L }
             vn.blindsupport.app.notify.NotifLog.add("[màn hình] thấy cuộc gọi ${AppIds.label(pkg)} đến từ \"$callerName\" → hỏi nghe máy")
-            onIncoming(app, VoipCallInfo(key, pkg, callerName.ifBlank { "người gọi không rõ tên" }, null, null, legacy = true))
+            val open = lastFullScreenIntent?.takeIf { System.currentTimeMillis() - lastFullScreenAt < 90_000L }
+            onIncoming(app, VoipCallInfo(key, pkg, callerName.ifBlank { "người gọi không rõ tên" }, null, null, legacy = true, open = open))
             watchScreenCall(key, pkg)
         }
     }
