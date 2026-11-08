@@ -33,6 +33,8 @@ import vn.blindsupport.app.voip.VoipCallController
 class BlindNotificationListener : NotificationListenerService() {
 
     private val ongoingVoipKeys = HashSet<String>()
+    private var lastMissedSig: String? = null
+    private var lastMissedAt = 0L
     private var batteryRegistered = false
 
     override fun onListenerConnected() {
@@ -108,6 +110,12 @@ class BlindNotificationListener : NotificationListenerService() {
         // 3) Cuộc gọi nhỡ Zalo/WhatsApp
         NotificationParser.missedVoipCall(sbn)?.let { missed ->
             VoipCallController.onMissed(sbn.packageName)
+            // Zalo hay đăng lại cùng một thông báo 2–3 lần liền: chỉ báo một lần.
+            val now = System.currentTimeMillis()
+            val sig = sbn.key + "|" + missed.raw
+            if (sig == lastMissedSig && now - lastMissedAt < 60_000L) return "cuộc gọi nhỡ (đã báo rồi)"
+            lastMissedSig = sig
+            lastMissedAt = now
             if (AppIds.readEnabled(sbn.packageName) || Prefs.voipCalls) {
                 announceMissed(sbn.packageName, missed)
                 return "cuộc gọi nhỡ"

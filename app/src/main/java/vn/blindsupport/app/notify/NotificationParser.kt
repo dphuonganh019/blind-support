@@ -180,7 +180,10 @@ object NotificationParser {
             ?: n.extras.getCharSequence(Notification.EXTRA_TEXT) ?: "").toString()
         val text = TextUtils.normalize("$body $title")
         val isMissed = n.category == CATEGORY_MISSED_CALL ||
-            text.contains("cuộc gọi nhỡ") || text.contains("gọi nhỡ") || text.contains("missed voice call") ||
+            text.contains("cuộc gọi nhỡ") || text.contains("gọi nhỡ") ||
+            // Zalo trên Android 11: tiêu đề "[Cuộc gọi thoại nhỡ]", nội dung là tên người gọi.
+            text.contains("cuộc gọi thoại nhỡ") || text.contains("cuộc gọi video nhỡ") ||
+            text.contains("missed voice call") ||
             text.contains("missed video call") || text.contains("missed call")
         if (!isMissed) return null
 
@@ -193,6 +196,11 @@ object NotificationParser {
         if (name == null) {
             Regex("(?:từ|from)\\s+(.+)$", RegexOption.IGNORE_CASE).find(body.trim())?.groupValues?.get(1)
                 ?.trim()?.trimEnd('.', '!')?.takeIf { !isGenericName(it) }?.let { name = it }
+        }
+        // Nội dung chỉ có tên người gọi ("Sơn Sữa").
+        if (name == null) {
+            body.trim().takeIf { it.isNotEmpty() && it.length <= 40 && !it.contains(':') && !isGenericName(it) }
+                ?.let { name = it }
         }
         // Số điện thoại ghi trong thông báo (nếu có).
         val number = PHONE_RE.find("$title $body")?.value?.filter { it.isDigit() || it == '+' }

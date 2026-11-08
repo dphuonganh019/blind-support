@@ -112,9 +112,24 @@ object VoipCallController {
         }
     }
 
+    /** Thông báo kiểu "cuộc gọi" gần nhất (Android 11: Zalo dùng cùng một thông báo lúc reo và lúc gọi). */
+    @Volatile private var lastCallNotifKey: String? = null
+    @Volatile private var lastCallNotifAt = 0L
+    /** Thông báo cuộc gọi của cuộc gọi đang hỏi (nhận theo cách Android 11): gỡ đi = cuộc gọi đã dừng reo. */
+    @Volatile private var linkedRingKey: String? = null
+
     /** Thông báo "đang trong cuộc gọi" của Zalo/WhatsApp xuất hiện. */
     fun onCallInProgress(key: String, contentIntent: PendingIntent?) {
         if (contentIntent != null) ongoingIntent = contentIntent
+        lastCallNotifKey = key
+        lastCallNotifAt = System.currentTimeMillis()
+        if (_state.value == State.RINGING && current?.legacy == true) {
+            // Android 11: Zalo đưa lên thông báo cuộc gọi (không chữ, không nút) ngay khi đang REO,
+            // giống hệt lúc đã nghe máy. Không được coi là đã nghe máy, kẻo app thôi hỏi và đóng
+            // màn hình của app sau 1 giây. Chỉ nhớ thông báo này để biết lúc cuộc gọi dừng reo.
+            linkedRingKey = key
+            return
+        }
         if (_state.value == State.RINGING) {
             stopPrompt()
             _state.value = State.ANSWERED
@@ -122,6 +137,11 @@ object VoipCallController {
     }
 
     fun onNotificationRemoved(context: Context, key: String) {
+        val c0 = current
+        if (c0 != null && c0.legacy && key == linkedRingKey && _state.value == State.RINGING) {
+            endRinging(c0.key, "Zalo gỡ thông báo cuộc gọi (người gọi đã cúp hoặc đã nghe/từ chối trên Zalo)")
+            return
+        }
         val c = current ?: return
         if (c.key != key) return
         if (_state.value == State.RINGING) {
@@ -278,6 +298,8 @@ object VoipCallController {
             val svc = vn.blindsupport.app.a11y.BlindAccessibilityService.instance ?: return@launch
             if (svc.incomingScreenState(pkg) != vn.blindsupport.app.a11y.BlindAccessibilityService.ScreenState.RINGING) return@launch
             val key = "screen:$pkg:${System.currentTimeMillis()}"
+            // Thông báo cuộc gọi Zalo vừa đăng (nếu có) là của cuộc gọi này.
+            linkedRingKey = lastCallNotifKey?.takeIf { System.currentTimeMillis() - lastCallNotifAt < 15_000L }
             vn.blindsupport.app.notify.NotifLog.add("[màn hình] thấy cuộc gọi ${AppIds.label(pkg)} đến từ \"$callerName\" → hỏi nghe máy")
             onIncoming(app, VoipCallInfo(key, pkg, callerName.ifBlank { "người gọi không rõ tên" }, null, null, legacy = true))
             watchScreenCall(key, pkg)
@@ -321,6 +343,7 @@ object VoipCallController {
         val c = current ?: return
         if (c.key != key || _state.value != State.RINGING) return
         vn.blindsupport.app.notify.NotifLog.add("[màn hình] dừng hỏi: $reason")
+        linkedRingKey = null
         stopPrompt()
         _state.value = State.IDLE
         current = null
