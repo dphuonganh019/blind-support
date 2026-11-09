@@ -4,6 +4,8 @@ App Android giúp người khiếm thị **nghe gọi điện thoại, gọi đi
 
 - Hỗ trợ Android 10 trở lên. Máy mục tiêu: **OPPO A92** (Android 11 / ColorOS 11.1); đã thử trên Samsung.
 - Một người sáng mắt (người hỗ trợ) cần cài đặt máy một lần, khoảng 15–20 phút.
+- 📖 **[Hướng dẫn cài đặt và sử dụng có hình minh họa](docs/HUONG_DAN_SU_DUNG.md)** – dành cho người hỗ trợ, viết dễ hiểu cho người không rành công nghệ.
+- Tải app: [trang Releases](https://github.com/dphuonganh019/blind-support/releases) (chọn bản mới nhất).
 
 ---
 
@@ -13,7 +15,7 @@ App Android giúp người khiếm thị **nghe gọi điện thoại, gọi đi
 
 1. App kéo **âm lượng chuông máy lên 100%** (gọi xong trả lại mức cũ), chuông máy reo **6 giây** trước (chỉnh được 0 / 3 / 6 / 10 giây), máy **rung liên tục** suốt lúc có cuộc gọi. Máy đang để chế độ im lặng/rung thì Android không cho app bật chuông – 6 giây đầu sẽ im, nhưng sau đó app vẫn đọc tên và phát chuông riêng như bình thường.
 2. App tắt chuông thật (để tiếng chuông không lọt vào micro) và nói ngắn gọn:
-   *"Có điện thoại! **Hưng Thỏ** gọi. Sau tiếng bíp, nói: nghe. Hoặc bấm phím cạnh máy để nghe."*
+   *"Có điện thoại! **Chị Trang** gọi. Sau tiếng bíp, nói: nghe. Hoặc bấm phím cạnh máy để nghe."*
    Số chưa lưu danh bạ thì đọc từng chữ số; số ẩn thì nói "số ẩn".
 3. Tiếng bíp ngắn → app nghe ngay sau tiếng bíp, khoảng **9 giây**.
 4. Nếu chưa trả lời: app phát **tiếng chuông của riêng app** khoảng 1,5 giây (vẫn kêu khi máy để im lặng), rồi hỏi ngắn: *"Bạn có muốn nghe máy không? Sau tiếng bíp, nói: nghe."* (nghe 7 giây) – lặp lại cho tới khi người gọi cúp máy.
@@ -64,7 +66,7 @@ App đọc to *"Bạn vừa nhỡ cuộc gọi từ …"*, luôn kèm **tên** (
 
 | Nói | App làm |
 |---|---|
-| **"Gọi [tên]"** – ví dụ "gọi Mẹ", "gọi chị Trang", "gọi Hưng" | Gọi sim người trong danh bạ (xem cách tìm tên bên dưới) |
+| **"Gọi [tên]"** – ví dụ "gọi Mẹ", "gọi chị Trang", "gọi anh Minh" | Gọi sim người trong danh bạ (xem cách tìm tên bên dưới) |
 | **"Gọi Zalo [tên]"**, **"Gọi WhatsApp [tên]"** | Gọi qua Zalo / WhatsApp, rồi tự bật loa ngoài |
 | **"Gọi số"** kèm số, ví dụ "gọi số không ba bốn năm…" | Gọi theo số điện thoại |
 | **"Gọi"** rồi dừng | App hỏi *"Bạn muốn gọi ai?"* |
@@ -92,7 +94,7 @@ App đọc to *"Bạn vừa nhỡ cuộc gọi từ …"*, luôn kèm **tên** (
 
 ### Gọi theo tên
 
-- Nói **cả tên hoặc một phần tên**, không cần đúng thứ tự, **không phân biệt dấu** (danh bạ lưu "Hung Tho" vẫn gọi được khi nói "Hưng Thỏ"). Tuy vậy nên lưu danh bạ **có dấu** để giọng đọc đọc tên cho dễ nghe.
+- Nói **cả tên hoặc một phần tên**, không cần đúng thứ tự, **không phân biệt dấu** (danh bạ lưu "Tran Minh" vẫn gọi được khi nói "Trần Minh"). Tuy vậy nên lưu danh bạ **có dấu** để giọng đọc đọc tên cho dễ nghe.
 - **Một người khớp:** app hỏi *"Bạn muốn gọi cho …, đúng không? Nói: đúng, để gọi. Nói: không, để hủy."*
 - **Nhiều người khớp (tối đa 6):** app đọc *"Có 3 người. Số 1: …. Số 2: …. Số 3: …. Bạn muốn gọi ai?"* – nói **số thứ tự** ("hai", "số hai", "người thứ hai") là **gọi ngay**; nói "hủy" để thôi. Hai người trùng hẳn tên thì đọc kèm 3 số cuối. Cùng một số điện thoại chỉ đọc một lần.
 - **Hơn 6 người khớp / không tìm thấy:** app xin nói thêm tên, hoặc nói lại.
@@ -121,7 +123,7 @@ App đọc to *"Bạn vừa nhỡ cuộc gọi từ …"*, luôn kèm **tên** (
 ## 3. Tin nhắn và thông báo khác
 
 - **Tin Zalo, WhatsApp, SMS:** đọc to người gửi và nội dung (lọc emoji, cắt tin quá dài). Tin thoại Zalo chỉ được báo "một tin nhắn thoại".
-- **Tin nhóm:** mặc định chỉ lưu lại (riêng với tin cá nhân), không đọc to; nói "tin nhóm" để nghe (app đọc *"nhóm hello, Thỏ Ngoan: Hi"*). Bật mục "Đọc to cả tin nhắn NHÓM" trong Cài đặt Trợ Lý nếu muốn đọc to cả tin nhóm. App nhận ra tin nhóm Zalo qua tiêu đề "Nhóm: …", tiêu đề cuộc trò chuyện khác tên người gửi, hoặc có nhiều người gửi (Zalo không tự đánh dấu tin nhóm).
+- **Tin nhóm:** mặc định chỉ lưu lại (riêng với tin cá nhân), không đọc to; nói "tin nhóm" để nghe (app đọc *"nhóm hello, Cô Lan: Hi"*). Bật mục "Đọc to cả tin nhắn NHÓM" trong Cài đặt Trợ Lý nếu muốn đọc to cả tin nhóm. App nhận ra tin nhóm Zalo qua tiêu đề "Nhóm: …", tiêu đề cuộc trò chuyện khác tên người gửi, hoặc có nhiều người gửi (Zalo không tự đánh dấu tin nhóm).
 - Đang gọi điện thì không đọc, lưu lại; gọi xong app nhắc số tin mới.
 - Máy để im lặng / rung **vẫn đọc** (người khiếm thị không nhìn thấy máy đang im lặng).
 - **Giờ yên tĩnh 22h–6h mặc định bật:** ban đêm không đọc tin nhắn (vẫn báo cuộc gọi); hết giờ yên tĩnh app nhắc số tin mới một lần.
@@ -183,7 +185,7 @@ ColorOS tắt app chạy nền rất mạnh. Làm cho **cả Trợ Lý Nghe Gọ
 
 ### 5.4. Danh bạ
 
-- Lưu tên **có dấu, dễ đọc** (ví dụ "Mẹ", "Anh Hưng", "Chị Trang").
+- Lưu tên **có dấu, dễ đọc** (ví dụ "Mẹ", "Anh Minh", "Chị Trang").
 - Gọi Zalo/WhatsApp bằng giọng nói dùng dòng **"Gọi Zalo" / "Gọi thoại WhatsApp"** mà Zalo/WhatsApp tự đồng bộ vào danh bạ máy, nên người đó cần có trong danh bạ máy với đúng số đăng ký Zalo/WhatsApp.
 - Một số ứng dụng đồng hồ thông minh (ví dụ "Call Bridge") tự tạo danh bạ giả tên "Zalo …" với số ảo – các mục này không gọi được; máy không cài các ứng dụng đó thì không gặp.
 

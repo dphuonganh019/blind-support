@@ -90,21 +90,21 @@ class ParsingTest {
     }
 
     private val aAnh = Contact("A Anh", "0911000001")
-    private val anhHung = Contact("Anh Hưng", "0911000002")
+    private val anhDung = Contact("Anh Dũng", "0911000002")
     private val chiTrang = Contact("Chị Trang", "0911000003")
     private val trangNguyen = Contact("Trang Nguyễn", "0911000004")
     private val me = Contact("Mẹ", "0900000000")
-    private val book = listOf(aAnh, anhHung, chiTrang, trangNguyen, me)
+    private val book = listOf(aAnh, anhDung, chiTrang, trangNguyen, me)
 
     @Test fun call_byFullOrPartialName() {
         assertEquals(Command.CallContact(aAnh), CommandParser.parse("gọi a anh", book))
         assertEquals(Command.CallContact(chiTrang), CommandParser.parse("gọi chị trang", book))
         assertEquals(Command.CallContact(chiTrang), CommandParser.parse("gọi cho chị trang đi", book))
-        assertEquals(Command.CallContact(anhHung), CommandParser.parse("gọi hưng", book))
-        assertEquals(Command.CallContact(anhHung), CommandParser.parse("gọi điện cho anh hưng", book))
+        assertEquals(Command.CallContact(anhDung), CommandParser.parse("gọi dũng", book))
+        assertEquals(Command.CallContact(anhDung), CommandParser.parse("gọi điện cho anh dũng", book))
         assertEquals(Command.CallContact(me), CommandParser.parse("gọi mẹ", book))
         // Không dấu vẫn khớp.
-        assertEquals(Command.CallContact(anhHung), CommandParser.parse("gọi hung", book))
+        assertEquals(Command.CallContact(anhDung), CommandParser.parse("gọi dung", book))
         // Thứ tự chữ khác vẫn khớp.
         assertEquals(Command.CallContact(trangNguyen), CommandParser.parse("gọi nguyễn trang", book))
     }
@@ -112,11 +112,11 @@ class ParsingTest {
     @Test fun call_ambiguousNameGivesChoices() {
         val anh = CommandParser.parse("gọi anh", book)
         assertTrue(anh is Command.ChooseContact)
-        assertEquals(setOf(aAnh, anhHung), (anh as Command.ChooseContact).candidates.toSet())
+        assertEquals(setOf(aAnh, anhDung), (anh as Command.ChooseContact).candidates.toSet())
         val trang = CommandParser.parse("gọi trang", book) as Command.ChooseContact
         assertEquals(setOf(chiTrang, trangNguyen), trang.candidates.toSet())
         // Nói "chị trang" khi danh bạ không có chữ "chị": lấy người khớp nhiều chữ nhất.
-        val book2 = listOf(trangNguyen, anhHung)
+        val book2 = listOf(trangNguyen, anhDung)
         assertEquals(Command.CallContact(trangNguyen), CommandParser.parse("gọi chị trang", book2))
     }
 
@@ -199,12 +199,12 @@ class ParsingTest {
 
     @Test fun commands() {
         val me = Contact("Mẹ", "0900000000")
-        val hung = Contact("Anh Hưng", "0911111111")
-        val contacts = listOf(me, hung)
+        val dung = Contact("Anh Dũng", "0911111111")
+        val contacts = listOf(me, dung)
         assertEquals(Command.CallNumber("091"), CommandParser.parse("gọi số không chín một", contacts))
         assertEquals(Command.CallNumber(""), CommandParser.parse("gọi số", contacts))
         assertEquals(Command.CallContact(me), CommandParser.parse("gọi mẹ", contacts))
-        assertEquals(Command.CallContact(hung), CommandParser.parse("gọi cho hưng", contacts))
+        assertEquals(Command.CallContact(dung), CommandParser.parse("gọi cho dũng", contacts))
         assertEquals(Command.CallBack, CommandParser.parse("gọi lại", contacts))
         assertEquals(Command.Time, CommandParser.parse("mấy giờ rồi", contacts))
         assertNull(CommandParser.parse("giờ", contacts))
@@ -222,12 +222,12 @@ class ParsingTest {
     }
 
     @Test fun sameNumberShownOnce_preferPhoneBookName() {
-        val a = Contact("HƯNG THỎ", "0912345678")
-        val b = Contact("Zalo Thỏ Ngoan", "84912345678")
-        val c = Contact("Zalo Hưng PA", "0987000111")
-        val r = CommandParser.findContacts(listOf("hưng"), listOf(a, b, c)) + CommandParser.findContacts(listOf("thỏ"), listOf(a, b, c))
+        val a = Contact("LAN HOA", "0912345678")
+        val b = Contact("Zalo Hoa Nhỏ", "84912345678")
+        val c = Contact("Zalo Lan PA", "0987000111")
+        val r = CommandParser.findContacts(listOf("lan"), listOf(a, b, c)) + CommandParser.findContacts(listOf("hoa"), listOf(a, b, c))
         assertTrue(r.contains(a))
-        assertFalse(CommandParser.findContacts(listOf("thỏ"), listOf(b, a)).contains(b))
+        assertFalse(CommandParser.findContacts(listOf("hoa"), listOf(b, a)).contains(b))
     }
 
     @Test fun textUtils() {

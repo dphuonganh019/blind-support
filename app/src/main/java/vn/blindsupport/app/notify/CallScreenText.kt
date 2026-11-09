@@ -39,7 +39,7 @@ object CallScreenText {
             val name = cleanName(texts[i]) ?: continue
             return name
         }
-        // Hoặc nằm cùng dòng: "Con Gái: Cuộc gọi thoại đến".
+        // Hoặc nằm cùng dòng: "Chị Trang: Cuộc gọi thoại đến".
         return nameFromLine(texts[idx]) ?: ""
     }
 
@@ -52,7 +52,7 @@ object CallScreenText {
         return null
     }
 
-    /** "Con Gái: Cuộc gọi thoại đến" → "Con Gái". */
+    /** "Chị Trang: Cuộc gọi thoại đến" → "Chị Trang". */
     private fun nameFromLine(line: String): String? {
         val before = line.substringBefore(':', "").trim()
         if (before.isEmpty()) return null

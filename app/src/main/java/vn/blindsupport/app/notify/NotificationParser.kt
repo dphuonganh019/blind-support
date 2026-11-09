@@ -261,7 +261,7 @@ object NotificationParser {
                 val sender = m.person?.name?.toString() ?: groupTitle ?: "không rõ"
                 val text = m.text.toString()
                 if (seenRecently(pkg, sender, text, now)) continue
-                // Tiêu đề cuộc trò chuyện khác tên người gửi (tiêu đề "hello", người gửi "Thỏ Ngoan") = nhóm.
+                // Tiêu đề cuộc trò chuyện khác tên người gửi (tiêu đề "hello", người gửi "Cô Lan") = nhóm.
                 val group = groupBySignals || (rawTitle != null && !sameName(rawTitle, sender))
                 val senderLabel = if (group && groupTitle != null) "nhóm $groupTitle, $sender" else sender
                 out += StoredMessage(app, senderLabel, text, m.timestamp, false, group) to group

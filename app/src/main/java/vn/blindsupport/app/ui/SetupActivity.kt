@@ -89,7 +89,7 @@ class SetupActivity : ComponentActivity() {
             unknownNames.addView(note(
                 "⚠️ ${bad.size} tên trong danh bạ KHÔNG gọi được bằng giọng nói vì bộ nhận dạng không biết chữ " +
                     "(thường là tên tiếng Anh, tên viết tắt). Hãy đổi tên trong danh bạ sang chữ tiếng Việt đơn giản, " +
-                    "ví dụ \"Chloe\" → \"Con Gái\":"
+                    "ví dụ \"Anna\" → \"Chị An\":"
             ))
             for ((name, words) in bad.take(30)) {
                 unknownNames.addView(note("   • $name  (không biết: ${words.joinToString(", ")})"))

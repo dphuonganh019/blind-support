@@ -11,14 +11,14 @@ import vn.blindsupport.app.notify.NotificationParser
 class CallScreenTextTest {
     @Test
     fun zaloIncomingScreen_findsCaller() {
-        val texts = listOf("Zalo", "Con Gái", "Zalo: Cuộc gọi thoại đến", "Từ chối", "Trả lời")
-        assertEquals("Con Gái", CallScreenText.incomingCaller(texts))
+        val texts = listOf("Zalo", "Chị Trang", "Zalo: Cuộc gọi thoại đến", "Từ chối", "Trả lời")
+        assertEquals("Chị Trang", CallScreenText.incomingCaller(texts))
     }
 
     @Test
     fun zaloVideoScreen_nameOnSameLine() {
-        val texts = listOf("Hưng PA: Cuộc gọi video đến", "Từ chối", "Trả lời")
-        assertEquals("Hưng PA", CallScreenText.incomingCaller(texts))
+        val texts = listOf("Dũng PA: Cuộc gọi video đến", "Từ chối", "Trả lời")
+        assertEquals("Dũng PA", CallScreenText.incomingCaller(texts))
     }
 
     @Test
@@ -35,8 +35,8 @@ class CallScreenTextTest {
 
     @Test
     fun notificationCaller() {
-        assertEquals("Con Gái", CallScreenText.callerFromNotification("Con Gái", "Cuộc gọi thoại đến"))
-        assertEquals("Con Gái", CallScreenText.callerFromNotification("Zalo", "Con Gái: Cuộc gọi thoại đến"))
+        assertEquals("Chị Trang", CallScreenText.callerFromNotification("Chị Trang", "Cuộc gọi thoại đến"))
+        assertEquals("Chị Trang", CallScreenText.callerFromNotification("Zalo", "Chị Trang: Cuộc gọi thoại đến"))
         assertNull(CallScreenText.callerFromNotification("Zalo", "Cuộc gọi thoại đến"))
     }
 
