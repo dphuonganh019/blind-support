@@ -4,6 +4,7 @@ App Android giúp người khiếm thị **nghe gọi điện thoại, gọi đi
 
 - Hỗ trợ Android 10 trở lên. Máy mục tiêu: **OPPO A92** (Android 11 / ColorOS 11.1); đã thử trên Samsung.
 - Một người sáng mắt (người hỗ trợ) cần cài đặt máy một lần, khoảng 15–20 phút.
+- 📱 **[Hướng dẫn cài đặt cho mọi máy Android](docs/HUONG_DAN_CAI_DAT_ANDROID.md)** – yêu cầu máy (Android, RAM, bộ nhớ…) và cách cài trên OPPO, Samsung, Xiaomi, vivo…
 - 📖 **[Hướng dẫn cài đặt và sử dụng có hình minh họa](docs/HUONG_DAN_SU_DUNG.md)** – dành cho người hỗ trợ, viết dễ hiểu cho người không rành công nghệ.
 - Tải app: [trang Releases](https://github.com/dphuonganh019/blind-support/releases) (chọn bản mới nhất).
 
